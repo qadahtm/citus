@@ -149,6 +149,8 @@ extern Oid CitusCopyFormatTypeId(void);
 
 /* function oids */
 extern Oid CitusReadIntermediateResultFuncId(void);
+extern Oid CitusReadIntermediateResultArrayFuncId(void);
+extern bool IsReadIntermediateResultFunctionId(Oid functionId);
 extern Oid CitusExtraDataContainerFuncId(void);
 extern Oid CitusWorkerHashFunctionId(void);
 extern Oid CitusTextSendAsJsonbFunctionId(void);
