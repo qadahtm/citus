@@ -38,6 +38,7 @@
 #endif
 #include "catalog/pg_index.h"
 #include "catalog/pg_type.h"
+#include "catalog/pg_type_d.h"
 #include "catalog/pg_namespace.h"
 #include "commands/sequence.h"
 #include "distributed/citus_ruleutils.h"
