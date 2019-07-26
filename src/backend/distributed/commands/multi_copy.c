@@ -1837,6 +1837,7 @@ CreateCitusCopyDestReceiver(Oid tableId, List *columnNameList, int partitionColu
 	copyDest->partitionColumnIndex = partitionColumnIndex;
 	copyDest->partitionMethod = partitionMethod;
 	copyDest->currentShardId = 0;
+	copyDest->shardsCreated = NIL;
 	copyDest->executorState = executorState;
 	copyDest->stopOnFailure = stopOnFailure;
 	copyDest->intermediateResultIdPrefix = intermediateResultIdPrefix;
@@ -1937,12 +1938,15 @@ CitusCopyDestReceiverStartup(DestReceiver *dest, int operation,
 	/* keep the table metadata to avoid looking it up for every tuple */
 	copyDest->tableMetadata = cacheEntry;
 
-	BeginOrContinueCoordinatedTransaction();
-
-	if (cacheEntry->replicationModel == REPLICATION_MODEL_2PC ||
-		MultiShardCommitProtocol == COMMIT_PROTOCOL_2PC)
+	if (partitionMethod != DISTRIBUTE_BY_APPEND)
 	{
-		CoordinatedTransactionUse2PC();
+		BeginOrContinueCoordinatedTransaction();
+
+		if (cacheEntry->replicationModel == REPLICATION_MODEL_2PC ||
+			MultiShardCommitProtocol == COMMIT_PROTOCOL_2PC)
+		{
+			CoordinatedTransactionUse2PC();
+		}
 	}
 
 	/* define how tuples will be serialised */
@@ -2093,11 +2097,12 @@ CitusSendTupleToPlacements(TupleTableSlot *slot, CitusCopyDestReceiver *copyDest
 			char *schemaName = copyStatement->relation->schemaname;
 			char *qualifiedName = quote_qualified_identifier(schemaName, relationName);
 			uint64 newShardId = MasterCreateEmptyShard(qualifiedName);
-			uint64 *newShardIdPointer = palloc0(sizeof(uint64));
-			*newShardIdPointer = newShardId;
 
 			copyDest->currentShardId = newShardId;
-			copyDest->shardsCreated = lappend(copyDest->shardsCreated, newShardIdPointer);
+
+			MemoryContextSwitchTo(oldContext);
+			copyDest->shardsCreated = lappend_int(copyDest->shardsCreated, newShardId);
+			MemoryContextSwitchTo(executorTupleContext);
 		}
 
 		shardId = copyDest->currentShardId;
@@ -2184,7 +2189,7 @@ CitusSendTupleToPlacements(TupleTableSlot *slot, CitusCopyDestReceiver *copyDest
 		}
 		else
 		{
-			Assert(currentPlacementState == activePlacementState);
+	//		Assert(currentPlacementState == activePlacementState);
 			sendTupleOverConnection = true;
 		}
 
@@ -2202,8 +2207,9 @@ CitusSendTupleToPlacements(TupleTableSlot *slot, CitusCopyDestReceiver *copyDest
 		if (copyDest->partitionMethod == DISTRIBUTE_BY_APPEND &&
 			currentPlacementState->bytesCopied > (int64) ShardMaxSize * 1024L)
 		{
-			copyDest->currentShardId = 0;
 			ShutdownCopyConnectionState(connectionState, copyDest);
+
+			copyDest->currentShardId = 0;
 		}
 	}
 
@@ -2313,12 +2319,14 @@ CitusCopyDestReceiverShutdown(DestReceiver *destReceiver)
 			ShutdownCopyConnectionState(connectionState, copyDest);
 		}
 
-		foreach(shardIdCell, copyDest->shardsCreated)
+		if (copyDest->shardsCreated != NIL)
 		{
-			uint64 *shardIdPointer = lfirst(shardIdCell);
-			uint64 shardId = *shardIdPointer;
+			foreach(shardIdCell, copyDest->shardsCreated)
+			{
+				uint64 shardId = lfirst_int(shardIdCell);
 
-			MasterUpdateShardStatistics(shardId);
+				MasterUpdateShardStatistics(shardId);
+			}
 		}
 	}
 	PG_CATCH();
