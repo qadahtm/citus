@@ -120,6 +120,7 @@ extern List * LoadShardIntervalList(Oid relationId);
 extern int ShardIntervalCount(Oid relationId);
 extern List * LoadShardList(Oid relationId);
 extern void CopyShardInterval(ShardInterval *srcInterval, ShardInterval *destInterval);
+extern uint64 * AllocateUint64(uint64 value);
 extern void CopyShardPlacement(ShardPlacement *srcPlacement,
 							   ShardPlacement *destPlacement);
 extern uint64 ShardLength(uint64 shardId);

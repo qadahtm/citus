@@ -2101,7 +2101,8 @@ CitusSendTupleToPlacements(TupleTableSlot *slot, CitusCopyDestReceiver *copyDest
 			copyDest->currentShardId = newShardId;
 
 			MemoryContextSwitchTo(oldContext);
-			copyDest->shardsCreated = lappend_int(copyDest->shardsCreated, newShardId);
+			uint64 *shardIdPointer = AllocateUint64(newShardId);
+			copyDest->shardsCreated = lappend(copyDest->shardsCreated, shardIdPointer);
 			MemoryContextSwitchTo(executorTupleContext);
 		}
 
@@ -2210,6 +2211,8 @@ CitusSendTupleToPlacements(TupleTableSlot *slot, CitusCopyDestReceiver *copyDest
 			ShutdownCopyConnectionState(connectionState, copyDest);
 
 			copyDest->currentShardId = 0;
+			currentPlacementState->bytesCopied = 0;
+			connectionState->activePlacementState = NULL;
 		}
 	}
 
@@ -2311,10 +2314,17 @@ CitusCopyDestReceiverShutdown(DestReceiver *destReceiver)
 
 	PG_TRY();
 	{
+		int i = 0;
 		foreach(connectionStateCell, connectionStateList)
 		{
 			CopyConnectionState *connectionState =
 				(CopyConnectionState *) lfirst(connectionStateCell);
+
+			if (PartitionMethod(distributedRelation->rd_id) == DISTRIBUTE_BY_APPEND &&
+				copyDest->currentShardId == 0)
+			{
+				continue;
+			}
 
 			ShutdownCopyConnectionState(connectionState, copyDest);
 		}
@@ -2323,9 +2333,9 @@ CitusCopyDestReceiverShutdown(DestReceiver *destReceiver)
 		{
 			foreach(shardIdCell, copyDest->shardsCreated)
 			{
-				uint64 shardId = lfirst_int(shardIdCell);
+				uint64 *shardIdPointer = (uint64 *) lfirst(shardIdCell);
 
-				MasterUpdateShardStatistics(shardId);
+				MasterUpdateShardStatistics(*shardIdPointer);
 			}
 		}
 	}
