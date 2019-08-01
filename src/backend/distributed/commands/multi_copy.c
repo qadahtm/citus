@@ -446,10 +446,10 @@ CopyToShards(CopyStmt *copyStatement, char *completionTag, char partitionMethod)
 	tupleTableSlot->tts_isnull = columnNulls;
 
 	/* determine the partition column index in the tuple descriptor */
-	partitionColumn = PartitionColumn(tableId, 0);
-	if (partitionColumn != NULL)
+	//partitionColumn = PartitionColumn(tableId, 0);
+//	if (partitionColumn != NULL)
 	{
-		partitionColumnIndex = partitionColumn->varattno - 1;
+	//	partitionColumnIndex = partitionColumn->varattno - 1;
 	}
 
 	/* build the list of column names for remote COPY statements */
@@ -1883,8 +1883,17 @@ CitusCopyDestReceiverStartup(DestReceiver *dest, int operation,
 
 	/* look up table properties */
 	distributedRelation = heap_open(tableId, RowExclusiveLock);
-	cacheEntry = DistributedTableCacheEntry(tableId);
-	partitionMethod = cacheEntry->partitionMethod;
+
+	if (IsDistributedTable(tableId))
+	{
+		cacheEntry = DistributedTableCacheEntry(tableId);
+		partitionMethod = cacheEntry->partitionMethod;
+	}
+	else
+	{
+		partitionMethod = DISTRIBUTE_BY_APPEND;
+	}
+
 
 	copyDest->distributedRelation = distributedRelation;
 	copyDest->tupleDescriptor = inputTupleDescriptor;
@@ -1986,7 +1995,7 @@ CitusCopyDestReceiverStartup(DestReceiver *dest, int operation,
 	if (partitionMethod != DISTRIBUTE_BY_NONE &&
 		copyDest->partitionColumnIndex == INVALID_PARTITION_COLUMN_INDEX)
 	{
-		ereport(ERROR, (errcode(ERRCODE_NULL_VALUE_NOT_ALLOWED),
+		ereport(WARNING, (errcode(ERRCODE_NULL_VALUE_NOT_ALLOWED),
 						errmsg("the partition column of table %s should have a value",
 							   quote_qualified_identifier(schemaName, relationName))));
 	}
