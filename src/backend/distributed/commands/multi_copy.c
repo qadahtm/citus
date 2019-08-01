@@ -2314,7 +2314,6 @@ CitusCopyDestReceiverShutdown(DestReceiver *destReceiver)
 
 	PG_TRY();
 	{
-		int i = 0;
 		foreach(connectionStateCell, connectionStateList)
 		{
 			CopyConnectionState *connectionState =
