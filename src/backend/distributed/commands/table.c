@@ -418,11 +418,16 @@ PlanAlterTableStmt(AlterTableStmt *alterTableStatement, const char *alterTableCo
 															   command);
 	}
 
+	if (executeSequentially)
+	{
+		SetLocalMultiShardModifyModeToSequential();
+	}
+
 	ddlJob = palloc0(sizeof(DDLJob));
 	ddlJob->targetRelationId = leftRelationId;
 	ddlJob->concurrentIndexCmd = false;
 	ddlJob->commandString = alterTableCommand;
-	ddlJob->executeSequentially = executeSequentially;
+	ddlJob->executeSequentially = false;
 
 	if (rightRelationId)
 	{
@@ -1221,6 +1226,7 @@ SetupExecutionModeForAlterTable(Oid relationId, AlterTableCmd *command)
 								"\"SET LOCAL citus.multi_shard_modify_mode TO "
 								"\'sequential\';\"")));
 	}
+
 
 	return executeSequentially;
 }
