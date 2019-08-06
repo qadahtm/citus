@@ -20,6 +20,8 @@ static const char * deparse_alter_owner_stmt(AlterOwnerStmt *stmt);
  *  - CREATE TYPE
  *  - ALTER TYPE
  *  - DROP TYPE
+ *
+ *  - DROP FUNCTION
  */
 const char *
 DeparseTreeNode(Node *stmt)
@@ -83,6 +85,11 @@ deparse_drop_stmt(DropStmt *stmt)
 		case OBJECT_TYPE:
 		{
 			return deparse_drop_type_stmt(stmt);
+		}
+
+		case OBJECT_FUNCTION:
+		{
+			return deparse_drop_function_stmt(stmt);
 		}
 
 		default:

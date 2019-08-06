@@ -27,9 +27,12 @@ extern char * format_collate_be(Oid type_oid);
 extern char * format_collate_be_qualified(Oid type_oid);
 extern char * format_collate_extended(Oid collid, bits16 flags);
 
+
 extern void QualifyTreeNode(Node *stmt);
 extern const char * DeparseTreeNode(Node *stmt);
 
+/* forward declarations for deparse_type_stmts.c */
+extern const char * deparse_create_type_stmt(Node *stmt);
 extern const char * deparse_composite_type_stmt(CompositeTypeStmt *stmt);
 extern const char * deparse_create_enum_stmt(CreateEnumStmt *stmt);
 extern const char * deparse_drop_type_stmt(DropStmt *stmt);
@@ -51,5 +54,10 @@ extern void qualify_alter_type_owner_stmt(AlterOwnerStmt *stmt);
 
 extern const ObjectAddress * GetObjectAddressFromParseTree(Node *parseTree, bool
 														   missing_ok);
+
+/* forward declarations for deparse_function_stmts.c */
+extern const char * deparse_drop_function_stmt(DropStmt *stmt);
+extern const char * deparse_alter_function_stmt(AlterFunctionStmt *stmt);
+
 
 #endif /* CITUS_DEPARSER_H */

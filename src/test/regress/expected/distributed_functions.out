@@ -1,0 +1,164 @@
+--
+-- Regression tests for deparsing ALTER/DROP TABLE Queries
+--
+-- This test implements all the possible queries as of Postgres 11:
+-- 
+-- ALTER FUNCTION name [ ( [ [ argmode ] [ argname ] argtype [, ...] ] ) ]
+--     action [ ... ] [ RESTRICT ]
+-- ALTER FUNCTION name [ ( [ [ argmode ] [ argname ] argtype [, ...] ] ) ]
+--     RENAME TO new_name
+-- ALTER FUNCTION name [ ( [ [ argmode ] [ argname ] argtype [, ...] ] ) ]
+--     OWNER TO { new_owner | CURRENT_USER | SESSION_USER }
+-- ALTER FUNCTION name [ ( [ [ argmode ] [ argname ] argtype [, ...] ] ) ]
+--     SET SCHEMA new_schema
+-- ALTER FUNCTION name [ ( [ [ argmode ] [ argname ] argtype [, ...] ] ) ]
+--     DEPENDS ON EXTENSION extension_name
+-- 
+-- where action is one of:
+-- 
+--     CALLED ON NULL INPUT | RETURNS NULL ON NULL INPUT | STRICT
+--     IMMUTABLE | STABLE | VOLATILE | [ NOT ] LEAKPROOF
+--     [ EXTERNAL ] SECURITY INVOKER | [ EXTERNAL ] SECURITY DEFINER
+--     PARALLEL { UNSAFE | RESTRICTED | SAFE }
+--     COST execution_cost
+--     ROWS result_rows
+--     SET configuration_parameter { TO | = } { value | DEFAULT }
+--     SET configuration_parameter FROM CURRENT
+--     RESET configuration_parameter
+--     RESET ALL
+-- 
+-- DROP FUNCTION [ IF EXISTS ] name [ ( [ [ argmode ] [ argname ] argtype [, ...] ] ) ] [, ...]
+--     [ CASCADE | RESTRICT ]
+SET citus.next_shard_id TO 20020000;
+CREATE SCHEMA function_tests;
+SET search_path TO function_tests;
+SET citus.shard_count TO 4;
+SET client_min_messages TO DEBUG;
+CREATE VIEW all_functions AS
+SELECT p.proname as "Name",
+       pg_catalog.pg_get_function_result(p.oid) as "Result data type",
+       pg_catalog.pg_get_function_arguments(p.oid) as "Argument data types"
+FROM pg_catalog.pg_proc p
+     LEFT JOIN pg_catalog.pg_namespace n ON n.oid = p.pronamespace
+WHERE n.nspname = 'function_tests'
+ORDER BY 1, 2, 3;
+-- Create a simple function
+CREATE FUNCTION add(integer, integer) RETURNS integer
+    AS 'select $1 + $2;'
+    LANGUAGE SQL
+    IMMUTABLE
+    RETURNS NULL ON NULL INPUT;
+ALTER FUNCTION add CALLED ON NULL INPUT;
+LOG:  deparsed alter function statement
+DETAIL:  sql: ALTER FUNCTION function_tests.add() CALLED ON NULL INPUT;
+ALTER FUNCTION add RETURNS NULL ON NULL INPUT;
+LOG:  deparsed alter function statement
+DETAIL:  sql: ALTER FUNCTION function_tests.add() STRICT;
+ALTER FUNCTION add STRICT;
+LOG:  deparsed alter function statement
+DETAIL:  sql: ALTER FUNCTION function_tests.add() STRICT;
+ALTER FUNCTION add IMMUTABLE;
+LOG:  deparsed alter function statement
+DETAIL:  sql: ALTER FUNCTION function_tests.add() immutable;
+ALTER FUNCTION add STABLE;
+LOG:  deparsed alter function statement
+DETAIL:  sql: ALTER FUNCTION function_tests.add() stable;
+ALTER FUNCTION add VOLATILE;
+LOG:  deparsed alter function statement
+DETAIL:  sql: ALTER FUNCTION function_tests.add() volatile;
+ALTER FUNCTION add LEAKPROOF;
+LOG:  deparsed alter function statement
+DETAIL:  sql: ALTER FUNCTION function_tests.add() LEAKPROOF;
+ALTER FUNCTION add NOT LEAKPROOF;
+LOG:  deparsed alter function statement
+DETAIL:  sql: ALTER FUNCTION function_tests.add() NOT LEAKPROOF;
+ALTER FUNCTION add EXTERNAL SECURITY INVOKER;
+LOG:  deparsed alter function statement
+DETAIL:  sql: ALTER FUNCTION function_tests.add() SECURITY INVOKER;
+ALTER FUNCTION add SECURITY INVOKER;
+LOG:  deparsed alter function statement
+DETAIL:  sql: ALTER FUNCTION function_tests.add() SECURITY INVOKER;
+ALTER FUNCTION add EXTERNAL SECURITY DEFINER;
+LOG:  deparsed alter function statement
+DETAIL:  sql: ALTER FUNCTION function_tests.add() SECURITY DEFINER;
+ALTER FUNCTION add SECURITY DEFINER;
+LOG:  deparsed alter function statement
+DETAIL:  sql: ALTER FUNCTION function_tests.add() SECURITY DEFINER;
+ALTER FUNCTION add PARALLEL UNSAFE;
+LOG:  deparsed alter function statement
+DETAIL:  sql: ALTER FUNCTION function_tests.add() PARALLEL unsafe;
+ALTER FUNCTION add PARALLEL RESTRICTED;
+LOG:  deparsed alter function statement
+DETAIL:  sql: ALTER FUNCTION function_tests.add() PARALLEL restricted;
+ALTER FUNCTION add PARALLEL SAFE;
+LOG:  deparsed alter function statement
+DETAIL:  sql: ALTER FUNCTION function_tests.add() PARALLEL safe;
+-- The COST/ROWS arguments should always be numeric
+ALTER FUNCTION add COST 1234;
+LOG:  deparsed alter function statement
+DETAIL:  sql: ALTER FUNCTION function_tests.add() COST 1234.000000;
+ALTER FUNCTION add COST 1234.5;
+LOG:  deparsed alter function statement
+DETAIL:  sql: ALTER FUNCTION function_tests.add() COST 1234.500000;
+ALTER FUNCTION add ROWS 10;
+LOG:  deparsed alter function statement
+DETAIL:  sql: ALTER FUNCTION function_tests.add() ROWS  10.000000;
+ERROR:  ROWS is not applicable when function does not return a set
+ALTER FUNCTION add ROWS 10.8;
+LOG:  deparsed alter function statement
+DETAIL:  sql: ALTER FUNCTION function_tests.add() ROWS  10.800000;
+ERROR:  ROWS is not applicable when function does not return a set
+ALTER FUNCTION add SET log_min_messages = ERROR;
+LOG:  deparsed alter function statement
+DETAIL:  sql: ALTER FUNCTION function_tests.add() SET log_min_messages = error;
+ALTER FUNCTION add SET log_min_messages TO DEFAULT;
+LOG:  deparsed alter function statement
+DETAIL:  sql: ALTER FUNCTION function_tests.add() SET log_min_messages TO DEFAULT;
+ALTER FUNCTION add SET log_min_messages FROM CURRENT;
+LOG:  deparsed alter function statement
+DETAIL:  sql: ALTER FUNCTION function_tests.add() SET log_min_messages FROM CURRENT;
+ALTER FUNCTION add RESET log_min_messages;
+LOG:  deparsed alter function statement
+DETAIL:  sql: ALTER FUNCTION function_tests.add() RESET log_min_messages;
+ALTER FUNCTION add RESET ALL;
+LOG:  deparsed alter function statement
+DETAIL:  sql: ALTER FUNCTION function_tests.add() RESET ALL;
+-- Create a function with the same name but with a different list of parameters
+CREATE FUNCTION add(integer, integer, integer) RETURNS integer
+    AS 'select $1 + $2 + $3;'
+    LANGUAGE SQL
+    IMMUTABLE
+    RETURNS NULL ON NULL INPUT;
+SELECT * FROM all_functions;
+ Name | Result data type |    Argument data types    
+------+------------------+---------------------------
+ add  | integer          | integer, integer
+ add  | integer          | integer, integer, integer
+(2 rows)
+
+-- Check that the deparsed query contains the correct argument list 
+ALTER FUNCTION add(int,int) RESET ALL;
+LOG:  deparsed alter function statement
+DETAIL:  sql: ALTER FUNCTION function_tests.add(pg_catalog.int4,pg_catalog.int4) RESET ALL;
+DROP FUNCTION IF EXISTS add(int,int);
+LOG:  deparsed drop function statement
+DETAIL:  sql: DROP FUNCTION IF EXISTS function_tests.add(pg_catalog.int4,pg_catalog.int4);
+DEBUG:  EventTriggerInvoke 16450
+-- Check that an invalid function name is still parsed correctly
+DROP FUNCTION IF EXISTS missing_function(int, text);
+LOG:  deparsed drop function statement
+DETAIL:  sql: DROP FUNCTION IF EXISTS missing_function(pg_catalog.int4,text);
+NOTICE:  function missing_function(pg_catalog.int4,text) does not exist, skipping
+DROP FUNCTION IF EXISTS missing_schema.missing_function(int,float);
+LOG:  deparsed drop function statement
+DETAIL:  sql: DROP FUNCTION IF EXISTS missing_schema.missing_function(pg_catalog.int4,pg_catalog.float8);
+NOTICE:  schema "missing_schema" does not exist, skipping
+SELECT * FROM all_functions;
+ Name | Result data type |    Argument data types    
+------+------------------+---------------------------
+ add  | integer          | integer, integer, integer
+(1 row)
+
+-- clear objects
+SET client_min_messages TO fatal; -- suppress cascading objects dropping
+DROP SCHEMA function_tests CASCADE;
