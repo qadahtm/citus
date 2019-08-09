@@ -605,10 +605,6 @@ DETAIL:  NOTICE from localhost:57637
 DEBUG:  CREATE TABLE / PRIMARY KEY will create implicit index "test_table_2_pkey" for table "test_table_2"
 DEBUG:  building index "test_table_2_pkey" on table "test_table_2" serially
 	SELECT create_distributed_table('test_table_2', 'id');
-DEBUG:  schema "test_fkey_to_ref_in_tx" already exists, skipping
-DETAIL:  NOTICE from localhost:57638
-DEBUG:  schema "test_fkey_to_ref_in_tx" already exists, skipping
-DETAIL:  NOTICE from localhost:57637
  create_distributed_table 
 --------------------------
  
@@ -638,10 +634,6 @@ DETAIL:  NOTICE from localhost:57637
 DEBUG:  CREATE TABLE / PRIMARY KEY will create implicit index "tt4_pkey" for table "tt4"
 DEBUG:  building index "tt4_pkey" on table "tt4" serially
 	SELECT create_distributed_table('tt4', 'id');
-DEBUG:  schema "test_fkey_to_ref_in_tx" already exists, skipping
-DETAIL:  NOTICE from localhost:57638
-DEBUG:  schema "test_fkey_to_ref_in_tx" already exists, skipping
-DETAIL:  NOTICE from localhost:57637
  create_distributed_table 
 --------------------------
  
@@ -651,10 +643,6 @@ DETAIL:  NOTICE from localhost:57637
 DEBUG:  CREATE TABLE / PRIMARY KEY will create implicit index "test_table_2_pkey" for table "test_table_2"
 DEBUG:  building index "test_table_2_pkey" on table "test_table_2" serially
 	SELECT create_distributed_table('test_table_2', 'id');
-DEBUG:  schema "test_fkey_to_ref_in_tx" already exists, skipping
-DETAIL:  NOTICE from localhost:57638
-DEBUG:  schema "test_fkey_to_ref_in_tx" already exists, skipping
-DETAIL:  NOTICE from localhost:57637
 ERROR:  cannot distribute relation "test_table_2" in this transaction because it has a foreign key to a reference table
 DETAIL:  If a hash distributed table has a foreign key to a reference table, it has to be created in sequential mode before any parallel commands have been executed in the same transaction
 HINT:  Try re-running the transaction with "SET LOCAL citus.multi_shard_modify_mode TO 'sequential';"
@@ -685,10 +673,6 @@ DETAIL:  NOTICE from localhost:57637
 DEBUG:  CREATE TABLE / PRIMARY KEY will create implicit index "tt4_pkey" for table "tt4"
 DEBUG:  building index "tt4_pkey" on table "tt4" serially
 	SELECT create_distributed_table('tt4', 'id');
-DEBUG:  schema "test_fkey_to_ref_in_tx" already exists, skipping
-DETAIL:  NOTICE from localhost:57638
-DEBUG:  schema "test_fkey_to_ref_in_tx" already exists, skipping
-DETAIL:  NOTICE from localhost:57637
  create_distributed_table 
 --------------------------
  
@@ -698,10 +682,6 @@ DETAIL:  NOTICE from localhost:57637
 DEBUG:  CREATE TABLE / PRIMARY KEY will create implicit index "test_table_2_pkey" for table "test_table_2"
 DEBUG:  building index "test_table_2_pkey" on table "test_table_2" serially
 	SELECT create_distributed_table('test_table_2', 'id');
-DEBUG:  schema "test_fkey_to_ref_in_tx" already exists, skipping
-DETAIL:  NOTICE from localhost:57638
-DEBUG:  schema "test_fkey_to_ref_in_tx" already exists, skipping
-DETAIL:  NOTICE from localhost:57637
  create_distributed_table 
 --------------------------
  
@@ -733,10 +713,6 @@ DETAIL:  NOTICE from localhost:57637
 DEBUG:  CREATE TABLE / PRIMARY KEY will create implicit index "test_table_2_pkey" for table "test_table_2"
 DEBUG:  building index "test_table_2_pkey" on table "test_table_2" serially
 	SELECT create_distributed_table('test_table_2', 'id');
-DEBUG:  schema "test_fkey_to_ref_in_tx" already exists, skipping
-DETAIL:  NOTICE from localhost:57638
-DEBUG:  schema "test_fkey_to_ref_in_tx" already exists, skipping
-DETAIL:  NOTICE from localhost:57637
  create_distributed_table 
 --------------------------
  
@@ -773,10 +749,6 @@ DETAIL:  NOTICE from localhost:57637
 DEBUG:  CREATE TABLE / PRIMARY KEY will create implicit index "test_table_2_pkey" for table "test_table_2"
 DEBUG:  building index "test_table_2_pkey" on table "test_table_2" serially
 	SELECT create_distributed_table('test_table_2', 'id');
-DEBUG:  schema "test_fkey_to_ref_in_tx" already exists, skipping
-DETAIL:  NOTICE from localhost:57638
-DEBUG:  schema "test_fkey_to_ref_in_tx" already exists, skipping
-DETAIL:  NOTICE from localhost:57637
  create_distributed_table 
 --------------------------
  
@@ -795,10 +767,6 @@ BEGIN;
 DEBUG:  CREATE TABLE / PRIMARY KEY will create implicit index "test_table_2_pkey" for table "test_table_2"
 DEBUG:  building index "test_table_2_pkey" on table "test_table_2" serially
 	SELECT create_distributed_table('test_table_2', 'id');
-DEBUG:  schema "test_fkey_to_ref_in_tx" already exists, skipping
-DETAIL:  NOTICE from localhost:57638
-DEBUG:  schema "test_fkey_to_ref_in_tx" already exists, skipping
-DETAIL:  NOTICE from localhost:57637
  create_distributed_table 
 --------------------------
  
@@ -834,10 +802,6 @@ BEGIN;
 DEBUG:  CREATE TABLE / PRIMARY KEY will create implicit index "test_table_2_pkey" for table "test_table_2"
 DEBUG:  building index "test_table_2_pkey" on table "test_table_2" serially
 	SELECT create_distributed_table('test_table_2', 'id');
-DEBUG:  schema "test_fkey_to_ref_in_tx" already exists, skipping
-DETAIL:  NOTICE from localhost:57638
-DEBUG:  schema "test_fkey_to_ref_in_tx" already exists, skipping
-DETAIL:  NOTICE from localhost:57637
  create_distributed_table 
 --------------------------
  
@@ -876,10 +840,6 @@ BEGIN;
 DEBUG:  CREATE TABLE / PRIMARY KEY will create implicit index "test_table_2_pkey" for table "test_table_2"
 DEBUG:  building index "test_table_2_pkey" on table "test_table_2" serially
 	SELECT create_distributed_table('test_table_2', 'id');
-DEBUG:  schema "test_fkey_to_ref_in_tx" already exists, skipping
-DETAIL:  NOTICE from localhost:57638
-DEBUG:  schema "test_fkey_to_ref_in_tx" already exists, skipping
-DETAIL:  NOTICE from localhost:57637
 ERROR:  cannot distribute relation "test_table_2" in this transaction because it has a foreign key to a reference table
 DETAIL:  If a hash distributed table has a foreign key to a reference table, it has to be created in sequential mode before any parallel commands have been executed in the same transaction
 HINT:  Try re-running the transaction with "SET LOCAL citus.multi_shard_modify_mode TO 'sequential';"
@@ -922,10 +882,6 @@ DEBUG:  Copied 101 rows
 (1 row)
 
 	SELECT create_distributed_table('test_table_2', 'id');
-DEBUG:  schema "test_fkey_to_ref_in_tx" already exists, skipping
-DETAIL:  NOTICE from localhost:57638
-DEBUG:  schema "test_fkey_to_ref_in_tx" already exists, skipping
-DETAIL:  NOTICE from localhost:57637
 ERROR:  cannot distribute "test_table_2" in sequential mode because it is not empty
 HINT:  If you have manually set citus.multi_shard_modify_mode to 'sequential', try with 'parallel' option. If that is not the case, try distributing local tables when they are empty.
 	-- make sure that the output isn't too verbose
@@ -960,10 +916,6 @@ DEBUG:  Copied 101 rows
 (1 row)
 
 	SELECT create_distributed_table('test_table_2', 'id');
-DEBUG:  schema "test_fkey_to_ref_in_tx" already exists, skipping
-DETAIL:  NOTICE from localhost:57638
-DEBUG:  schema "test_fkey_to_ref_in_tx" already exists, skipping
-DETAIL:  NOTICE from localhost:57637
 ERROR:  cannot distribute "test_table_2" in sequential mode because it is not empty
 HINT:  If you have manually set citus.multi_shard_modify_mode to 'sequential', try with 'parallel' option. If that is not the case, try distributing local tables when they are empty.
 	
@@ -996,10 +948,6 @@ DETAIL:  Reference relation "test_table_1" is modified, which might lead to data
 (1 row)
 
 	SELECT create_distributed_table('test_table_2', 'id');
-DEBUG:  schema "test_fkey_to_ref_in_tx" already exists, skipping
-DETAIL:  NOTICE from localhost:57638
-DEBUG:  schema "test_fkey_to_ref_in_tx" already exists, skipping
-DETAIL:  NOTICE from localhost:57637
  create_distributed_table 
 --------------------------
  
@@ -1049,10 +997,6 @@ CREATE TABLE distributed_table(id int PRIMARY KEY, value_1 int);
 DEBUG:  CREATE TABLE / PRIMARY KEY will create implicit index "distributed_table_pkey" for table "distributed_table"
 DEBUG:  building index "distributed_table_pkey" on table "distributed_table" serially
 SELECT create_distributed_table('distributed_table', 'id');
-DEBUG:  schema "test_fkey_to_ref_in_tx" already exists, skipping
-DETAIL:  NOTICE from localhost:57638
-DEBUG:  schema "test_fkey_to_ref_in_tx" already exists, skipping
-DETAIL:  NOTICE from localhost:57637
  create_distributed_table 
 --------------------------
  
