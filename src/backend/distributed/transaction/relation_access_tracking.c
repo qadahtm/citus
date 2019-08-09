@@ -168,7 +168,8 @@ RecordRelationAccessIfReferenceTable(Oid relationId, ShardPlacementAccessType ac
 	 * recursively calling RecordRelationAccessBase(), so becareful about
 	 * removing this check.
 	 */
-	if (PartitionMethod(relationId) != DISTRIBUTE_BY_NONE)
+	if (IsDistributedTable(relationId) &&
+		PartitionMethod(relationId) != DISTRIBUTE_BY_NONE)
 	{
 		return;
 	}

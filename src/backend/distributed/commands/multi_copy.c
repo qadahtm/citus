@@ -446,10 +446,17 @@ CopyToShards(CopyStmt *copyStatement, char *completionTag, char partitionMethod)
 	tupleTableSlot->tts_isnull = columnNulls;
 
 	/* determine the partition column index in the tuple descriptor */
-	partitionColumn = PartitionColumn(tableId, 0);
-	if (partitionColumn != NULL)
+	if (partitionMethod == DISTRIBUTE_BY_APPEND)
 	{
-		partitionColumnIndex = partitionColumn->varattno - 1;
+		partitionColumnIndex = -1;
+	}
+	else
+	{
+		partitionColumn = PartitionColumn(tableId, 0);
+		if (partitionColumn != NULL)
+		{
+			partitionColumnIndex = partitionColumn->varattno - 1;
+		}
 	}
 
 	/* build the list of column names for remote COPY statements */
@@ -1576,7 +1583,7 @@ RemoteCreateEmptyShard(char *relationName)
 
 	StringInfo createEmptyShardCommand = makeStringInfo();
 	appendStringInfo(createEmptyShardCommand, CREATE_EMPTY_SHARD_QUERY, relationName);
-
+elog(INFO, "%s", createEmptyShardCommand->data);
 	if (!SendRemoteCommand(masterConnection, createEmptyShardCommand->data))
 	{
 		ReportConnectionError(masterConnection, ERROR);
@@ -1591,7 +1598,7 @@ RemoteCreateEmptyShard(char *relationName)
 	else
 	{
 		ReportResultError(masterConnection, queryResult, WARNING);
-		ereport(ERROR, (errmsg("could not create a new empty shard on the remote node")));
+		ereport(ERROR, (errmsg("could not create a new empty shard on the remote node %d", masterConnection->port)));
 	}
 
 	PQclear(queryResult);
@@ -1883,8 +1890,16 @@ CitusCopyDestReceiverStartup(DestReceiver *dest, int operation,
 
 	/* look up table properties */
 	distributedRelation = heap_open(tableId, RowExclusiveLock);
+
+	if (IsDistributedTable(tableId))
+	{
 	cacheEntry = DistributedTableCacheEntry(tableId);
 	partitionMethod = cacheEntry->partitionMethod;
+	}
+	else
+	{
+		partitionMethod = DISTRIBUTE_BY_APPEND;
+	}
 
 	copyDest->distributedRelation = distributedRelation;
 	copyDest->tupleDescriptor = inputTupleDescriptor;
@@ -1983,7 +1998,7 @@ CitusCopyDestReceiverStartup(DestReceiver *dest, int operation,
 		quotedColumnNameList = lappend(quotedColumnNameList, quotedColumnName);
 	}
 
-	if (partitionMethod != DISTRIBUTE_BY_NONE &&
+	if ( !(partitionMethod == DISTRIBUTE_BY_NONE || partitionMethod == DISTRIBUTE_BY_APPEND) &&
 		copyDest->partitionColumnIndex == INVALID_PARTITION_COLUMN_INDEX)
 	{
 		ereport(ERROR, (errcode(ERRCODE_NULL_VALUE_NOT_ALLOWED),
@@ -2095,7 +2110,10 @@ CitusSendTupleToPlacements(TupleTableSlot *slot, CitusCopyDestReceiver *copyDest
 		{
 			char *relationName = copyStatement->relation->relname;
 			char *schemaName = copyStatement->relation->schemaname;
-			char *qualifiedName = quote_qualified_identifier(schemaName, relationName);
+			elog(INFO, "schemaName: %s", schemaName);
+			char *qualifiedName = quote_qualified_identifier("public", relationName);
+			elog(INFO, "qualifiedName before MasterCreateEmptyShard: %s", qualifiedName);
+
 			uint64 newShardId = MasterCreateEmptyShard(qualifiedName);
 
 			copyDest->currentShardId = newShardId;
@@ -2647,6 +2665,7 @@ CreateLocalTable(RangeVar *relation, char *nodeName, int32 nodePort)
 	foreach(ddlCommandCell, ddlCommandList)
 	{
 		StringInfo ddlCommand = (StringInfo) lfirst(ddlCommandCell);
+		elog(INFO, "ddlCommand: %s", ddlCommand->data);
 		Node *ddlCommandNode = ParseTreeNode(ddlCommand->data);
 		bool applyDDLCommand = false;
 
