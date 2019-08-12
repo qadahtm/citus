@@ -13,6 +13,16 @@ CREATE OR REPLACE FUNCTION citus_internal.finish_pg_upgrade_pg_dist_object()
   LANGUAGE C STRICT
   AS 'MODULE_PATHNAME', 'citus_finish_pg_upgrade_pg_dist_object';
 
+CREATE OR REPLACE FUNCTION worker_create_if_not_exists(statement text)
+  RETURNS bool
+  LANGUAGE C STRICT
+  AS 'MODULE_PATHNAME', $$worker_create_if_not_exists$$;
+
+CREATE OR REPLACE FUNCTION worker_create_or_replace(statement text)
+  RETURNS bool
+  LANGUAGE C STRICT
+  AS 'MODULE_PATHNAME', $$worker_create_or_replace$$;
+
 CREATE TABLE citus.pg_dist_object (
     classid oid NOT NULL,
     objid oid NOT NULL,

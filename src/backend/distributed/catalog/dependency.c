@@ -17,6 +17,7 @@
 #include "catalog/dependency.h"
 #include "catalog/indexing.h"
 #include "catalog/pg_depend.h"
+#include "catalog/pg_type.h"
 #include "utils/fmgroids.h"
 #include "utils/lsyscache.h"
 
@@ -99,6 +100,29 @@ SupportedDependencyByCitus(const ObjectAddress *address)
 		case OCLASS_SCHEMA:
 		{
 			return true;
+		}
+
+		case OCLASS_TYPE:
+		{
+			switch (get_typtype(address->objectId))
+			{
+				case TYPTYPE_ENUM:
+				case TYPTYPE_COMPOSITE:
+				{
+					return true;
+				}
+
+				default:
+				{
+					/* type not supported */
+					return false;
+				}
+			}
+
+			/*
+			 * should be unreachable, break here is to make sure the function has a path
+			 * without return, instead of falling through to the next block */
+			break;
 		}
 
 		default:

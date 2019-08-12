@@ -149,6 +149,11 @@ GetDependencyCreateDDLCommands(const ObjectAddress *dependency)
 			return list_make1((void *) schemaDDLCommand);
 		}
 
+		case OCLASS_TYPE:
+		{
+			return CreateTypeDDLCommandsIdempotent(dependency);
+		}
+
 		default:
 		{
 			return NIL;
