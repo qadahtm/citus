@@ -126,6 +126,7 @@ master_create_distributed_table(PG_FUNCTION_ARGS)
 	char distributionMethod = 0;
 	char *colocateWithTableName = NULL;
 	bool viaDeprecatedAPI = true;
+	ObjectAddress tableAddress = { 0 };
 
 	Relation relation = NULL;
 
@@ -134,12 +135,15 @@ master_create_distributed_table(PG_FUNCTION_ARGS)
 	EnsureTableOwner(relationId);
 
 	/*
-	 * Ensure schema exists on each worker node. We can not run this function
-	 * transactionally, since we may create shards over separate sessions and
-	 * shard creation depends on the schema being present and visible from all
-	 * sessions.
+	 * distributed tables might have dependencies on different objects, since we create
+	 * shards for a distributed table via multiple sessions these objects will be created
+	 * via their own connection and committed immediately so they become visible to all
+	 * sessions creating shards.
 	 */
-	EnsureSchemaForRelationExistsOnAllNodes(relationId);
+
+	/* TODO the dependencies are created outside of this transaction, the book keeping within */
+	ObjectAddressSet(tableAddress, RelationRelationId, relationId);
+	EnsureDependenciesExistsOnAllNodes(&tableAddress);
 
 	/*
 	 * Lock target relation with an exclusive lock - there's no way to make
@@ -270,6 +274,7 @@ create_reference_table(PG_FUNCTION_ARGS)
 	List *workerNodeList = NIL;
 	int workerCount = 0;
 	Var *distributionColumn = NULL;
+	ObjectAddress tableAddress = { 0 };
 
 	bool viaDeprecatedAPI = false;
 
@@ -278,12 +283,15 @@ create_reference_table(PG_FUNCTION_ARGS)
 	EnsureTableOwner(relationId);
 
 	/*
-	 * Ensure schema exists on each worker node. We can not run this function
-	 * transactionally, since we may create shards over separate sessions and
-	 * shard creation depends on the schema being present and visible from all
-	 * sessions.
+	 * distributed tables might have dependencies on different objects, since we create
+	 * shards for a distributed table via multiple sessions these objects will be created
+	 * via their own connection and committed immediately so they become visible to all
+	 * sessions creating shards.
 	 */
-	EnsureSchemaForRelationExistsOnAllNodes(relationId);
+
+	/* TODO the dependencies are created outside of this transaction, the book keeping within */
+	ObjectAddressSet(tableAddress, RelationRelationId, relationId);
+	EnsureDependenciesExistsOnAllNodes(&tableAddress);
 
 	/*
 	 * Lock target relation with an exclusive lock - there's no way to make
