@@ -349,14 +349,77 @@ ALTER TABLE limit_orders_750000 RENAME TO renamed_orders;
 -- Fourth: Perform an INSERT on the remaining node
 -- the whole transaction should fail
 \set VERBOSITY terse
+SELECT get_shard_id_for_distribution_column('limit_orders'::regclass, 276);
+ get_shard_id_for_distribution_column 
+--------------------------------------
+                               750000
+(1 row)
+
+SELECT * FROM pg_dist_shard_placement WHERE shardid = 750000;
+ shardid | shardstate | shardlength | nodename  | nodeport | placementid 
+---------+------------+-------------+-----------+----------+-------------
+  750000 |          1 |           0 | localhost |    57637 |      750000
+  750000 |          1 |           0 | localhost |    57638 |      750001
+(2 rows)
+
 INSERT INTO limit_orders VALUES (276, 'ADR', 140, '2007-07-02 16:32:15', 'sell', 43.67);
 ERROR:  relation "public.limit_orders_750000" does not exist
+SELECT * FROM pg_dist_shard_placement WHERE shardid = 750000;
+ shardid | shardstate | shardlength | nodename  | nodeport | placementid 
+---------+------------+-------------+-----------+----------+-------------
+  750000 |          1 |           0 | localhost |    57637 |      750000
+  750000 |          1 |           0 | localhost |    57638 |      750001
+(2 rows)
+
 -- set the shard name back
 \c - - - :worker_2_port
 -- Second: Move aside limit_orders shard on the second worker node
 ALTER TABLE renamed_orders RENAME TO limit_orders_750000;
+SELECT * FROM limit_orders_750000;
+  id   | symbol | bidder_id |            placed_at            | kind |    limit_price     
+-------+--------+-----------+---------------------------------+------+--------------------
+ 32744 | AAPL   |      9580 | Tue Oct 19 10:23:54 2004        | buy  |              20.69
+ 12756 | MSFT   |     10959 | Wed May 08 07:29:23 2013        | sell |               0.00
+  2036 | GOOG   |      5634 | Wed Aug 14 08:15:49.006304 2019 | buy  | 0.0349080716259778
+ 12037 | GOOG   |      5634 | Mon Apr 16 03:37:28 2001        | buy  |               0.50
+ 12038 | GOOG   |      5634 | Tue Apr 17 03:37:28 2001        | buy  |               2.50
+ 22038 | GOOG   |      5634 | Wed Aug 14 08:15:49.014878 2019 | buy  |               2.50
+ 22039 | GOOG   |      5634 | Wed Aug 14 08:15:49.014878 2019 | buy  |               1.50
+ 70004 | GOOG   |      5634 | Wed Aug 14 08:15:49.019007 2019 | buy  |               0.50
+ 80005 | GOOG   |      5634 | Wed Aug 14 08:15:49.019007 2019 | buy  |               2.50
+ 80093 | GOOG   |      5634 | Wed Aug 14 08:15:49.019007 2019 | buy  |               1.50
+   411 | FLO    |        12 | Sun Jul 02 16:32:15 2017        | buy  |                 66
+   246 | GM     |        30 | Mon Jul 02 16:32:15 2007        | buy  |                999
+(12 rows)
+
+\c - - - :worker_1_port
+SELECT * FROM limit_orders_750000;
+  id   | symbol | bidder_id |            placed_at            | kind |    limit_price     
+-------+--------+-----------+---------------------------------+------+--------------------
+ 32744 | AAPL   |      9580 | Tue Oct 19 10:23:54 2004        | buy  |              20.69
+ 12756 | MSFT   |     10959 | Wed May 08 07:29:23 2013        | sell |               0.00
+  2036 | GOOG   |      5634 | Wed Aug 14 08:15:49.006304 2019 | buy  | 0.0349080716259778
+ 12037 | GOOG   |      5634 | Mon Apr 16 03:37:28 2001        | buy  |               0.50
+ 12038 | GOOG   |      5634 | Tue Apr 17 03:37:28 2001        | buy  |               2.50
+ 22038 | GOOG   |      5634 | Wed Aug 14 08:15:49.014878 2019 | buy  |               2.50
+ 22039 | GOOG   |      5634 | Wed Aug 14 08:15:49.014878 2019 | buy  |               1.50
+ 70004 | GOOG   |      5634 | Wed Aug 14 08:15:49.019007 2019 | buy  |               0.50
+ 80005 | GOOG   |      5634 | Wed Aug 14 08:15:49.019007 2019 | buy  |               2.50
+ 80093 | GOOG   |      5634 | Wed Aug 14 08:15:49.019007 2019 | buy  |               1.50
+   411 | FLO    |        12 | Sun Jul 02 16:32:15 2017        | buy  |                 66
+   246 | GM     |        30 | Mon Jul 02 16:32:15 2007        | buy  |                999
+   276 | ADR    |       140 | Mon Jul 02 16:32:15 2007        | sell |              43.67
+(13 rows)
+
 -- Connect back to master node
 \c - - - :master_port
+SELECT * FROM pg_dist_shard_placement WHERE shardid = 750000;
+ shardid | shardstate | shardlength | nodename  | nodeport | placementid 
+---------+------------+-------------+-----------+----------+-------------
+  750000 |          1 |           0 | localhost |    57637 |      750000
+  750000 |          1 |           0 | localhost |    57638 |      750001
+(2 rows)
+
 -- Verify the insert failed and both placements are healthy
 SELECT count(*) FROM limit_orders WHERE id = 276;
  count 
@@ -406,8 +469,52 @@ AND    s.logicalrelid = 'limit_orders'::regclass;
 \c - - - :worker_1_port
 -- Second: Move aside limit_orders shard on the second worker node
 ALTER TABLE renamed_orders RENAME TO limit_orders_750000;
+SELECT * FROM limit_orders_750000;
+  id   | symbol | bidder_id |            placed_at            | kind |    limit_price     
+-------+--------+-----------+---------------------------------+------+--------------------
+ 32744 | AAPL   |      9580 | Tue Oct 19 10:23:54 2004        | buy  |              20.69
+ 12756 | MSFT   |     10959 | Wed May 08 07:29:23 2013        | sell |               0.00
+  2036 | GOOG   |      5634 | Wed Aug 14 08:15:49.006304 2019 | buy  | 0.0349080716259778
+ 12037 | GOOG   |      5634 | Mon Apr 16 03:37:28 2001        | buy  |               0.50
+ 12038 | GOOG   |      5634 | Tue Apr 17 03:37:28 2001        | buy  |               2.50
+ 22038 | GOOG   |      5634 | Wed Aug 14 08:15:49.014878 2019 | buy  |               2.50
+ 22039 | GOOG   |      5634 | Wed Aug 14 08:15:49.014878 2019 | buy  |               1.50
+ 70004 | GOOG   |      5634 | Wed Aug 14 08:15:49.019007 2019 | buy  |               0.50
+ 80005 | GOOG   |      5634 | Wed Aug 14 08:15:49.019007 2019 | buy  |               2.50
+ 80093 | GOOG   |      5634 | Wed Aug 14 08:15:49.019007 2019 | buy  |               1.50
+   411 | FLO    |        12 | Sun Jul 02 16:32:15 2017        | buy  |                 66
+   246 | GM     |        30 | Mon Jul 02 16:32:15 2007        | buy  |                999
+   276 | ADR    |       140 | Mon Jul 02 16:32:15 2007        | sell |              43.67
+(13 rows)
+
+\c - - - :worker_1_port
+SELECT * FROM limit_orders_750000;
+  id   | symbol | bidder_id |            placed_at            | kind |    limit_price     
+-------+--------+-----------+---------------------------------+------+--------------------
+ 32744 | AAPL   |      9580 | Tue Oct 19 10:23:54 2004        | buy  |              20.69
+ 12756 | MSFT   |     10959 | Wed May 08 07:29:23 2013        | sell |               0.00
+  2036 | GOOG   |      5634 | Wed Aug 14 08:15:49.006304 2019 | buy  | 0.0349080716259778
+ 12037 | GOOG   |      5634 | Mon Apr 16 03:37:28 2001        | buy  |               0.50
+ 12038 | GOOG   |      5634 | Tue Apr 17 03:37:28 2001        | buy  |               2.50
+ 22038 | GOOG   |      5634 | Wed Aug 14 08:15:49.014878 2019 | buy  |               2.50
+ 22039 | GOOG   |      5634 | Wed Aug 14 08:15:49.014878 2019 | buy  |               1.50
+ 70004 | GOOG   |      5634 | Wed Aug 14 08:15:49.019007 2019 | buy  |               0.50
+ 80005 | GOOG   |      5634 | Wed Aug 14 08:15:49.019007 2019 | buy  |               2.50
+ 80093 | GOOG   |      5634 | Wed Aug 14 08:15:49.019007 2019 | buy  |               1.50
+   411 | FLO    |        12 | Sun Jul 02 16:32:15 2017        | buy  |                 66
+   246 | GM     |        30 | Mon Jul 02 16:32:15 2007        | buy  |                999
+   276 | ADR    |       140 | Mon Jul 02 16:32:15 2007        | sell |              43.67
+(13 rows)
+
 -- Third: Connect back to master node
 \c - - - :master_port
+SELECT * FROM pg_dist_shard_placement WHERE shardid = 750000;
+ shardid | shardstate | shardlength | nodename  | nodeport | placementid 
+---------+------------+-------------+-----------+----------+-------------
+  750000 |          1 |           0 | localhost |    57637 |      750000
+  750000 |          1 |           0 | localhost |    57638 |      750001
+(2 rows)
+
 -- attempting to change the partition key is unsupported
 UPDATE limit_orders SET id = 0 WHERE id = 246;
 ERROR:  modifying the partition value of rows is not allowed

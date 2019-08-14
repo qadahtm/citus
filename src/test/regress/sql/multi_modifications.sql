@@ -254,17 +254,26 @@ ALTER TABLE limit_orders_750000 RENAME TO renamed_orders;
 -- Fourth: Perform an INSERT on the remaining node
 -- the whole transaction should fail
 \set VERBOSITY terse
+SELECT get_shard_id_for_distribution_column('limit_orders'::regclass, 276);
+SELECT * FROM pg_dist_shard_placement WHERE shardid = 750000;
 INSERT INTO limit_orders VALUES (276, 'ADR', 140, '2007-07-02 16:32:15', 'sell', 43.67);
 
+SELECT * FROM pg_dist_shard_placement WHERE shardid = 750000;
 -- set the shard name back
 \c - - - :worker_2_port
 
 -- Second: Move aside limit_orders shard on the second worker node
 ALTER TABLE renamed_orders RENAME TO limit_orders_750000;
+SELECT * FROM limit_orders_750000;
+
+
+\c - - - :worker_1_port
+SELECT * FROM limit_orders_750000;
 
 -- Connect back to master node
 \c - - - :master_port
 
+SELECT * FROM pg_dist_shard_placement WHERE shardid = 750000;
 -- Verify the insert failed and both placements are healthy
 SELECT count(*) FROM limit_orders WHERE id = 276;
 
@@ -308,9 +317,13 @@ AND    s.logicalrelid = 'limit_orders'::regclass;
 
 -- Second: Move aside limit_orders shard on the second worker node
 ALTER TABLE renamed_orders RENAME TO limit_orders_750000;
+SELECT * FROM limit_orders_750000;
 
+\c - - - :worker_1_port
+SELECT * FROM limit_orders_750000;
 -- Third: Connect back to master node
 \c - - - :master_port
+SELECT * FROM pg_dist_shard_placement WHERE shardid = 750000;
 
 -- attempting to change the partition key is unsupported
 UPDATE limit_orders SET id = 0 WHERE id = 246;
