@@ -1837,7 +1837,7 @@ DistObjectClassIDObjectIDIndexId(void)
 								  CitusCatalogNamespaceId(),
 								  &MetadataCache.distObjectClassIDObjectIDIndexId);
 
-	return MetadataCache.distObjectRelationId;
+	return MetadataCache.distObjectClassIDObjectIDIndexId;
 }
 
 
