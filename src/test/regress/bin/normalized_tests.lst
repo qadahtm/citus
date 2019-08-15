@@ -13,6 +13,7 @@ multi_alter_table_statements
 multi_copy
 multi_create_table_constraints
 multi_explain
+multi_follower_select_statements
 multi_foreign_key
 multi_generate_ddl_commands
 multi_having_pushdown
