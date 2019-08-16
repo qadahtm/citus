@@ -46,6 +46,7 @@ EnsureDependenciesExistsOnAllNodes(const ObjectAddress *target)
 
 	/* local variables to work with dependencies */
 	List *dependencies = NIL;
+	List *dependenciesWithCommands = NIL;
 	ListCell *dependencyCell = NULL;
 
 	/* local variables to collect ddl commands */
@@ -64,14 +65,23 @@ EnsureDependenciesExistsOnAllNodes(const ObjectAddress *target)
 	foreach(dependencyCell, dependencies)
 	{
 		ObjectAddress *dependency = (ObjectAddress *) lfirst(dependencyCell);
-		ddlCommands = list_concat(ddlCommands,
-								  GetDependencyCreateDDLCommands(dependency));
+		List *dependencyCommands = GetDependencyCreateDDLCommands(dependency);
+		ddlCommands = list_concat(ddlCommands, dependencyCommands);
+
+		/* create a new list with dependencies that actually created commands */
+		if (list_length(dependencyCommands) > 0)
+		{
+			dependenciesWithCommands = lappend(dependenciesWithCommands, dependency);
+		}
 	}
 	if (list_length(ddlCommands) <= 0)
 	{
 		/* no ddl commands to be executed */
 		return;
 	}
+
+	/* since we are executing ddl commands lets disable propagation, primarily for mx */
+	ddlCommands = list_concat(list_make1(DISABLE_DDL_PROPAGATION), ddlCommands);
 
 	/*
 	 * collect and connect to all applicable nodes
@@ -108,9 +118,9 @@ EnsureDependenciesExistsOnAllNodes(const ObjectAddress *target)
 	}
 
 	/*
-	 * mark all objects as distributed
+	 * mark all objects that had commands as distributed
 	 */
-	foreach(dependencyCell, dependencies)
+	foreach(dependencyCell, dependenciesWithCommands)
 	{
 		ObjectAddress *dependency = (ObjectAddress *) lfirst(dependencyCell);
 		markObjectDistributed(dependency);
@@ -190,6 +200,9 @@ ReplicateAllDependenciesToNode(const char *nodeName, int nodePort)
 		/* no commands to replicate dependencies to the new worker */
 		return;
 	}
+
+	/* since we are executing ddl commands lets disable propagation, primarily for mx */
+	ddlCommands = list_concat(list_make1(DISABLE_DDL_PROPAGATION), ddlCommands);
 
 	/*
 	 * connect to the new host and create all applicable dependencies

@@ -112,6 +112,15 @@ SupportedDependencyByCitus(const ObjectAddress *address)
 					return true;
 				}
 
+				case TYPTYPE_BASE:
+				{
+					/*
+					 * array types should be followed but not created, as they get created
+					 * by the original type.
+					 */
+					return type_is_array(address->objectId);
+				}
+
 				default:
 				{
 					/* type not supported */
@@ -292,8 +301,6 @@ recurse_pg_depend(const ObjectAddress *target,
  * objects which should be distributed before the root object can safely be created.
  *
  * Objects are only followed if all of the following checks hold true:
- *  - the pg_depend entry is a normal dependency, all other types are created and
- *    maintained by postgres
  *  - the object is not already in the targetList (context), if it is already in there an
  *    other object already caused the creation of this object
  *  - the object is not already marked as distributed in pg_dist_object. Objects in
@@ -309,11 +316,6 @@ follow_get_dependencies_for_object(void *context, const Form_pg_depend pg_depend
 	List **targetList = (List **) context;
 	ObjectAddress address = { 0 };
 	ObjectAddressSet(address, pg_depend->refclassid, pg_depend->refobjid);
-
-	if (pg_depend->deptype != DEPENDENCY_NORMAL)
-	{
-		return false;
-	}
 
 	if (IsObjectAddressInList(&address, *targetList))
 	{
@@ -349,8 +351,6 @@ follow_get_dependencies_for_object(void *context, const Form_pg_depend pg_depend
  * For completeness the list of all edges it will follow;
  *
  * Objects are only followed if all of the following checks hold true:
- *  - the pg_depend entry is a normal dependency, all other types are created and
- *    maintained by postgres
  *  - the object is not already in the targetList (context), if it is already in there an
  *    other object already caused the creation of this object
  *  - object is not created by an other extension. Objects created by extensions are
@@ -364,11 +364,6 @@ follow_order_object_address(void *context, const Form_pg_depend pg_depend)
 	List **targetList = (List **) context;
 	ObjectAddress address = { 0 };
 	ObjectAddressSet(address, pg_depend->refclassid, pg_depend->refobjid);
-
-	if (pg_depend->deptype != DEPENDENCY_NORMAL)
-	{
-		return false;
-	}
 
 	if (IsObjectAddressInList(&address, *targetList))
 	{

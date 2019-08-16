@@ -22,6 +22,7 @@
 #include "postgres.h"
 
 #include "access/htup_details.h"
+#include "access/xact.h"
 #include "catalog/namespace.h"
 #include "catalog/pg_enum.h"
 #include "catalog/pg_type.h"
@@ -81,6 +82,11 @@ PlanCompositeTypeStmt(CompositeTypeStmt *stmt, const char *queryString)
 	Oid typeOid = InvalidOid;
 	ObjectAddress typeAddress = { 0 };
 
+	if (IsTransactionBlock())
+	{
+		return NIL;
+	}
+
 	if (ExtensionStmtInProgess())
 	{
 		/*
@@ -136,6 +142,11 @@ PlanAlterTypeStmt(AlterTableStmt *stmt, const char *queryString)
 	ObjectAddress typeAddress = { 0 };
 
 	Assert(stmt->relkind == OBJECT_TYPE);
+
+	if (IsTransactionBlock())
+	{
+		return NIL;
+	}
 
 	if (ExtensionStmtInProgess())
 	{
@@ -557,6 +568,17 @@ CreateTypeDDLCommandsIdempotent(const ObjectAddress *typeAddress)
 	const char *username = NULL;
 
 	Assert(typeAddress->classId == TypeRelationId);
+
+	if (type_is_array(typeAddress->objectId))
+	{
+		/*
+		 * array types cannot be created on their own, but could be a direct dependency of
+		 * a table. In that case they are on the dependency graph and tried to be created.
+		 *
+		 * By returning an empty list we will not send any commands to create this type.
+		 */
+		return NIL;
+	}
 
 	stmt = RecreateTypeStatement(typeAddress->objectId);
 
