@@ -794,6 +794,12 @@ EnsurePartitionTableNotReplicated(Oid relationId)
 static DeferredErrorMessage *
 DeferErrorIfPartitionTableNotSingleReplicated(Oid relationId)
 {
+	/*
+	 * We acquire and release locks. If we don't release locks here, we can
+	 * get into distributed deadlock when truncating in MX.
+	 */
+	Relation lockedRelation = heap_open(relationId, AccessShareLock);
+
 	if (PartitionTableNoLock(relationId) && !SingleReplicatedTable(relationId))
 	{
 		Oid parentOid = PartitionParentOid(relationId);
@@ -803,12 +809,15 @@ DeferErrorIfPartitionTableNotSingleReplicated(Oid relationId)
 		appendStringInfo(errorHint, "Run the query on the parent table "
 									"\"%s\" instead.", parentRelationTest);
 
+		heap_close(lockedRelation, AccessShareLock);
+
 		return DeferredError(ERRCODE_FEATURE_NOT_SUPPORTED,
 							 "modifications on partitions when replication "
 							 "factor is greater than 1 is not supported",
 							 NULL, errorHint->data);
 	}
 
+	heap_close(lockedRelation, AccessShareLock);
 	return NULL;
 }
 
