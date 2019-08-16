@@ -411,11 +411,12 @@ static CompositeTypeStmt *
 RecreateCompositeTypeStmt(Oid typeOid)
 {
 	CompositeTypeStmt *stmt = NULL;
+	List *names = NIL;
 
 	Assert(get_typtype(typeOid) == TYPTYPE_COMPOSITE);
 
 	stmt = makeNode(CompositeTypeStmt);
-	List *names = stringToQualifiedNameList(format_type_be_qualified(typeOid));
+	names = stringToQualifiedNameList(format_type_be_qualified(typeOid));
 	stmt->typevar = makeRangeVarFromNameList(names);
 	stmt->coldeflist = composite_type_coldeflist(typeOid);
 
