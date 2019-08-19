@@ -12,6 +12,7 @@
 
 #include "catalog/dependency.h"
 #include "catalog/objectaddress.h"
+#include "utils/lsyscache.h"
 
 #include "distributed/dist_catalog/dependency.h"
 #include "distributed/connection_management.h"
@@ -164,11 +165,38 @@ GetDependencyCreateDDLCommands(const ObjectAddress *dependency)
 			return CreateTypeDDLCommandsIdempotent(dependency);
 		}
 
+		case OCLASS_CLASS:
+		{
+			/*
+			 * types have an intermediate dependency on a relation (aka class), so we do
+			 * support classes when the relkind is composite
+			 */
+			if (get_rel_relkind(dependency->objectId) == RELKIND_COMPOSITE_TYPE)
+			{
+				return NIL;
+			}
+
+			/* if this relation is not supported, break to the error at the end */
+			break;
+		}
+
 		default:
 		{
-			return NIL;
+			break;
 		}
 	}
+
+	/*
+	 * make sure it fails hard when in debug mode, leave a hint for the user if this ever
+	 * happens in production
+	 */
+	Assert(false);
+	ereport(ERROR, (errmsg("unsupported type %s for distribution by citus",
+						   getObjectTypeDescription(dependency)),
+					errdetail(
+						"citus tries to recreate an unsupported object on its workers"),
+					errhint("please report a bug as this should not be happening")));
+	return NIL;
 }
 
 

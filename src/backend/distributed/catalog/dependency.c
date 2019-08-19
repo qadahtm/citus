@@ -16,6 +16,7 @@
 #include "access/skey.h"
 #include "catalog/dependency.h"
 #include "catalog/indexing.h"
+#include "catalog/pg_class.h"
 #include "catalog/pg_depend.h"
 #include "catalog/pg_type.h"
 #include "utils/fmgroids.h"
@@ -30,13 +31,14 @@ static bool IsObjectAddressInList(const ObjectAddress *findAddress, List *addres
 static bool IsObjectAddressOwnedByExtension(const ObjectAddress *target);
 
 static void recurse_pg_depend(const ObjectAddress *target,
-							  bool (*follow)(void *context, const Form_pg_depend row),
-							  void (*apply)(void *context, const Form_pg_depend row),
+							  bool (*follow)(void *context, Form_pg_depend row),
+							  List * (*expand)(void *context, Form_pg_depend row),
+							  void (*apply)(void *context, Form_pg_depend row),
 							  void *context);
-static bool follow_order_object_address(void *context, const Form_pg_depend pg_depend);
-static bool follow_get_dependencies_for_object(void *context,
-											   const Form_pg_depend pg_depend);
-static void apply_add_to_target_list(void *context, const Form_pg_depend pg_depend);
+static bool follow_order_object_address(void *context, Form_pg_depend pg_depend);
+static bool follow_get_dependencies_for_object(void *context, Form_pg_depend pg_depend);
+static void apply_add_to_target_list(void *context, Form_pg_depend pg_depend);
+static List * epxand_citus_supported_types(void *context, Form_pg_depend pg_depend);
 
 
 /*
@@ -50,6 +52,7 @@ GetDependenciesForObject(const ObjectAddress *target)
 	List *dependencyList = NIL;
 	recurse_pg_depend(target,
 					  &follow_get_dependencies_for_object,
+					  &epxand_citus_supported_types,
 					  &apply_add_to_target_list,
 					  &dependencyList);
 	return dependencyList;
@@ -217,6 +220,7 @@ OrderObjectAddressListInDependencyOrder(List *objectAddressList)
 
 		recurse_pg_depend(objectAddress,
 						  &follow_order_object_address,
+						  &epxand_citus_supported_types,
 						  &apply_add_to_target_list,
 						  &targetList);
 
@@ -248,8 +252,9 @@ OrderObjectAddressListInDependencyOrder(List *objectAddressList)
  */
 static void
 recurse_pg_depend(const ObjectAddress *target,
-				  bool (*follow)(void *context, const Form_pg_depend row),
-				  void (*apply)(void *context, const Form_pg_depend row),
+				  bool (*follow)(void *context, Form_pg_depend row),
+				  List * (*expand)(void *context, Form_pg_depend row),
+				  void (*apply)(void *context, Form_pg_depend row),
 				  void *context)
 {
 	Relation depRel = NULL;
@@ -282,7 +287,42 @@ recurse_pg_depend(const ObjectAddress *target,
 		 * recurse depth first, this makes sure we call apply for the deepest dependency
 		 * first.
 		 */
-		recurse_pg_depend(&address, follow, apply, context);
+		recurse_pg_depend(&address, follow, expand, apply, context);
+
+		/*
+		 * the expand function will be used (when set) to add more candidates to the
+		 * exploration.
+		 */
+		if (expand != NULL)
+		{
+			List *expansion = expand(context, pg_depend);
+			ListCell *expandedObjectAddress = NULL;
+			foreach(expandedObjectAddress, expansion)
+			{
+				ObjectAddress *expandedAddress = (ObjectAddress *) lfirst(
+					expandedObjectAddress);
+				recurse_pg_depend(expandedAddress, follow, expand, apply, context);
+
+				if (apply != NULL)
+				{
+					/*
+					 * create a pg_depend entry for the expanded row, simulating a normal
+					 * dependency from out current target to our expanded object.
+					 */
+					FormData_pg_depend expanded_pg_depend = { 0 };
+					expanded_pg_depend.classid = target->classId;
+					expanded_pg_depend.objid = target->objectId;
+					expanded_pg_depend.objsubid = target->objectSubId;
+
+					expanded_pg_depend.refclassid = expandedAddress->classId;
+					expanded_pg_depend.refobjid = expandedAddress->objectId;
+					expanded_pg_depend.refobjsubid = expandedAddress->objectSubId;
+					expanded_pg_depend.deptype = DEPENDENCY_NORMAL;
+
+					apply(context, &expanded_pg_depend);
+				}
+			}
+		}
 
 		/* now apply changes for current entry */
 		if (apply != NULL)
@@ -311,11 +351,16 @@ recurse_pg_depend(const ObjectAddress *target,
  *    the object we will not try and distribute it.
  */
 static bool
-follow_get_dependencies_for_object(void *context, const Form_pg_depend pg_depend)
+follow_get_dependencies_for_object(void *context, Form_pg_depend pg_depend)
 {
 	List **targetList = (List **) context;
 	ObjectAddress address = { 0 };
 	ObjectAddressSet(address, pg_depend->refclassid, pg_depend->refobjid);
+
+	if (pg_depend->deptype != DEPENDENCY_NORMAL)
+	{
+		return false;
+	}
 
 	if (IsObjectAddressInList(&address, *targetList))
 	{
@@ -359,11 +404,16 @@ follow_get_dependencies_for_object(void *context, const Form_pg_depend pg_depend
  *    the object we will not try and distribute it.
  */
 static bool
-follow_order_object_address(void *context, const Form_pg_depend pg_depend)
+follow_order_object_address(void *context, Form_pg_depend pg_depend)
 {
 	List **targetList = (List **) context;
 	ObjectAddress address = { 0 };
 	ObjectAddressSet(address, pg_depend->refclassid, pg_depend->refobjid);
+
+	if (pg_depend->deptype != DEPENDENCY_NORMAL)
+	{
+		return false;
+	}
 
 	if (IsObjectAddressInList(&address, *targetList))
 	{
@@ -390,11 +440,54 @@ follow_order_object_address(void *context, const Form_pg_depend pg_depend)
  * assumed to be a (List **) to the location where all ObjectAddresses will be collected.
  */
 static void
-apply_add_to_target_list(void *context, const Form_pg_depend pg_depend)
+apply_add_to_target_list(void *context, Form_pg_depend pg_depend)
 {
 	List **targetList = (List **) context;
 	ObjectAddress *address = palloc0(sizeof(ObjectAddress));
 	ObjectAddressSet(*address, pg_depend->refclassid, pg_depend->refobjid);
 
 	*targetList = lappend(*targetList, address);
+}
+
+
+/*
+ * epxand_citus_supported_types base on supported types by citus we might want to expand
+ * the list of objects to visit in pg_depend.
+ *
+ * An example where we want to expand is for types. Their dependencies are not captured
+ * with an entry in pg_depend from their object address, but by the object address of the
+ * relation describing the type.
+ */
+static List *
+epxand_citus_supported_types(void *context, Form_pg_depend pg_depend)
+{
+	List *result = NIL;
+	ObjectAddress *target = (ObjectAddress *) (&pg_depend->refclassid);
+
+	switch (target->classId)
+	{
+		case TypeRelationId:
+		{
+			/*
+			 * types depending on other types are not captured in pg_depend, instead they
+			 * are described with their dependencies by the relation that describes the
+			 * composite type.
+			 */
+			if (get_typtype(target->objectId) == TYPTYPE_COMPOSITE)
+			{
+				ObjectAddress *address = palloc0(sizeof(ObjectAddress));
+				ObjectAddressSet(*address, RelationRelationId, get_typ_typrelid(
+									 target->objectId));
+				result = lappend(result, address);
+			}
+			break;
+		}
+
+		default:
+		{
+			/* no expansion for unsupported types */
+			break;
+		}
+	}
+	return result;
 }
