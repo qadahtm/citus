@@ -40,6 +40,9 @@ static List * GetDependencyCreateDDLCommands(const ObjectAddress *dependency);
  * This is solved by creating the dependencies in an idempotent manner, either via
  * postgres native CREATE IF NOT EXISTS, or citus helper functions.
  */
+#include "distributed/multi_physical_planner.h"
+#include "distributed/listutils.h"
+#include "distributed/multi_executor.h"
 void
 EnsureDependenciesExistsOnAllNodes(const ObjectAddress *target)
 {
@@ -93,6 +96,10 @@ EnsureDependenciesExistsOnAllNodes(const ObjectAddress *target)
 		/* no nodes to execute on */
 		return;
 	}
+	Task *task = palloc0(sizeof(Task));
+	task->taskType = DDL_TASK;
+	task->queryString = StringJoin(ddlCommands, ';');
+
 	foreach(workerNodeCell, workerNodeList)
 	{
 		WorkerNode *workerNode = (WorkerNode *) lfirst(workerNodeCell);
@@ -100,24 +107,16 @@ EnsureDependenciesExistsOnAllNodes(const ObjectAddress *target)
 
 		char *nodeName = workerNode->workerName;
 		uint32 nodePort = workerNode->workerPort;
+		ShardPlacement * sh = palloc0(sizeof(ShardPlacement));
 
-		connection = GetNodeUserDatabaseConnection(connectionFlag, nodeName,
-												   nodePort,
-												   CitusExtensionOwnerName(),
-												   NULL);
+		sh->nodeName = pstrdup(nodeName);
+		sh->nodePort = nodePort;
 
-		connections = lappend(connections, connection);
+		task->taskPlacementList = lappend(task->taskPlacementList, sh);
 	}
 
-	/*
-	 * create dependency on all nodes
-	 */
-	foreach(connectionCell, connections)
-	{
-		MultiConnection *connection = (MultiConnection *) lfirst(connectionCell);
-		ExecuteCriticalRemoteCommandList(connection, ddlCommands);
-	}
-
+	ExecuteTaskList(ROW_MODIFY_NONE, list_make1(task), MaxAdaptiveExecutorPoolSize);
+	SetLocalMultiShardModifyModeToSequential();
 	/*
 	 * mark all objects that had commands as distributed
 	 */
@@ -127,15 +126,9 @@ EnsureDependenciesExistsOnAllNodes(const ObjectAddress *target)
 		markObjectDistributed(dependency);
 	}
 
-	/*
-	 * disconnect from nodes
-	 */
-	foreach(connectionCell, connections)
-	{
-		MultiConnection *connection = (MultiConnection *) lfirst(connectionCell);
-		CloseConnection(connection);
-	}
+
 }
+
 
 
 /*
