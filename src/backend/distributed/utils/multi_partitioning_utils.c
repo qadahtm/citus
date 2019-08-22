@@ -33,7 +33,6 @@
 
 
 static char * PartitionBound(Oid partitionId);
-static Relation try_relation_open_nolock(Oid relationId);
 
 
 /*
@@ -71,7 +70,7 @@ PartitionedTable(Oid relationId)
 bool
 PartitionedTableNoLock(Oid relationId)
 {
-	Relation rel = try_relation_open_nolock(relationId);
+	Relation rel = try_relation_open(relationId, AccessShareLock);
 	bool partitionedTable = false;
 
 	/* don't error out for tables that are dropped */
@@ -86,7 +85,7 @@ PartitionedTableNoLock(Oid relationId)
 	}
 
 	/* keep the lock */
-	heap_close(rel, NoLock);
+	heap_close(rel, AccessShareLock);
 
 	return partitionedTable;
 }
@@ -124,7 +123,7 @@ PartitionTable(Oid relationId)
 bool
 PartitionTableNoLock(Oid relationId)
 {
-	Relation rel = try_relation_open_nolock(relationId);
+	Relation rel = try_relation_open(relationId, AccessShareLock);
 	bool partitionTable = false;
 
 	/* don't error out for tables that are dropped */
@@ -136,36 +135,12 @@ PartitionTableNoLock(Oid relationId)
 	partitionTable = rel->rd_rel->relispartition;
 
 	/* keep the lock */
-	heap_close(rel, NoLock);
+	heap_close(rel, AccessShareLock);
 
 	return partitionTable;
 }
 
 
-/*
- * try_relation_open_nolock opens a relation with given relationId without
- * acquiring locks. PostgreSQL's try_relation_open() asserts that caller
- * has already acquired a lock on the relation, which we don't always do.
- */
-static Relation
-try_relation_open_nolock(Oid relationId)
-{
-	Relation relation = NULL;
-	if (!SearchSysCacheExists1(RELOID, ObjectIdGetDatum(relationId)))
-	{
-		return NULL;
-	}
-
-	relation = RelationIdGetRelation(relationId);
-	if (!RelationIsValid(relation))
-	{
-		return NULL;
-	}
-
-	pgstat_initstats(relation);
-
-	return relation;
-}
 
 
 /*
