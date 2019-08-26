@@ -1715,6 +1715,8 @@ RunDistributedExecution(DistributedExecution *execution)
 		pfree(events);
 		FreeWaitEventSet(execution->waitEventSet);
 
+		elog(ERROR, "CleanUpSessions fails");
+
 		CleanUpSessions(execution);
 	}
 	PG_CATCH();
