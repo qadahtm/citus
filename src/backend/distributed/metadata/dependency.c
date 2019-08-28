@@ -362,6 +362,11 @@ SupportedDependencyByCitus(const ObjectAddress *address)
 			return false;
 		}
 
+		case OCLASS_PROC:
+		{
+			return true;
+		}
+
 		default:
 		{
 			/* unsupported type */

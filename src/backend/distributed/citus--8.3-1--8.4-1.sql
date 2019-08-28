@@ -47,6 +47,12 @@ CREATE OR REPLACE FUNCTION worker_create_or_replace(statement text)
   LANGUAGE C STRICT
   AS 'MODULE_PATHNAME', $$worker_create_or_replace$$;
 
+
+CREATE OR REPLACE FUNCTION create_distributed_function(function_name regprocedure)
+  RETURNS void
+  LANGUAGE C STRICT
+  AS 'MODULE_PATHNAME', $$create_distributed_function$$;
+
 CREATE TABLE citus.pg_dist_object (
     classid oid NOT NULL,
     objid oid NOT NULL,

@@ -14,8 +14,49 @@
 
 #include "postgres.h"
 
+#include "catalog/pg_proc.h"
 #include "distributed/commands.h"
 #include "distributed/deparser.h"
+#include "distributed/master_metadata_utility.h"
+#include "distributed/metadata_sync.h"
+#include "distributed/worker_transaction.h"
+#include "utils/fmgrprotos.h"
+#include "utils/builtins.h"
+#include "distributed/metadata/distobject.h"
+
+PG_FUNCTION_INFO_V1(create_distributed_function);
+
+
+static const char *
+GetFunctionDDLCommand(Oid funcOid)
+{
+	Datum sqlTextDatum = DirectFunctionCall1(pg_get_functiondef, ObjectIdGetDatum(
+												 funcOid));
+	const char *sql = TextDatumGetCString(sqlTextDatum);
+	return sql;
+}
+
+
+Datum
+create_distributed_function(PG_FUNCTION_ARGS)
+{
+	RegProcedure funcOid = PG_GETARG_OID(0);
+	const char *ddlCommand = NULL;
+	ObjectAddress functionAddress = { 0 };
+	ObjectAddressSet(functionAddress, ProcedureRelationId, funcOid);
+
+	EnsureDependenciesExistsOnAllNodes(&functionAddress);
+
+	ddlCommand = GetFunctionDDLCommand(funcOid);
+
+	/* EnsureSequentialModeForTypeDDL(); */
+	SendCommandToWorkersAsUser(ALL_WORKERS, DISABLE_DDL_PROPAGATION, NULL);
+	SendCommandToWorkersAsUser(ALL_WORKERS, ddlCommand, NULL);
+
+	MarkObjectDistributed(&functionAddress);
+
+	PG_RETURN_VOID();
+}
 
 
 List *

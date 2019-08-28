@@ -126,7 +126,6 @@ appendFunctionNameList(StringInfo buf, List *objects)
 			appendStringInfo(buf, ", ");
 		}
 
-		Assert(IsA(object, ObjectWithArgs));
 		func = castNode(ObjectWithArgs, object);
 
 		appendFunctionName(buf, func);
