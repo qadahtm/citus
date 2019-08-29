@@ -33,6 +33,8 @@ int TaskExecutorType = MULTI_EXECUTOR_ADAPTIVE; /* distributed executor type */
 bool BinaryMasterCopyFormat = false; /* copy data from workers in binary format */
 bool EnableRepartitionJoins = false;
 
+static bool
+TaskListContaintsLocalPlacement(List *taskList);
 
 /*
  * JobExecutorType selects the executor type for the given distributedPlan using the task
@@ -76,7 +78,12 @@ JobExecutorType(DistributedPlan *distributedPlan)
 			}
 		}
 
-		if (TaskExecutorType == MULTI_EXECUTOR_ADAPTIVE)
+
+		if (TaskListContaintsLocalPlacement(job->taskList))
+		{
+			return MULTI_EXECUTOR_LOCAL;
+		}
+		else if (TaskExecutorType == MULTI_EXECUTOR_ADAPTIVE)
 		{
 			return TaskExecutorType;
 		}
@@ -169,6 +176,38 @@ JobExecutorType(DistributedPlan *distributedPlan)
 	return executorType;
 }
 
+
+static bool
+TaskListContaintsLocalPlacement(List *taskList)
+{
+	ListCell *taskCell = NULL;
+	int localGroupId = GetLocalGroupId();
+
+	/* we cannot have local placement unless we're on a worker with metadata */
+	if (localGroupId == 0)
+	{
+		return false;
+	}
+
+	foreach(taskCell, taskList)
+	{
+		Task *task = (Task *) lfirst(taskCell);
+		ListCell *placementCell = NULL;
+
+		foreach(placementCell, task->taskPlacementList)
+		{
+			ShardPlacement *taskPlacement =
+				(ShardPlacement *) lfirst(placementCell);
+
+			if (taskPlacement->groupId == localGroupId)
+			{
+				return true;
+			}
+		}
+	}
+
+	return false;
+}
 
 /*
  * MaxMasterConnectionCount returns the number of connections a master can open.

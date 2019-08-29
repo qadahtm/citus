@@ -579,7 +579,7 @@ static TaskExecutionState TaskExecutionStateMachine(ShardCommandExecution *
  * of the input scanScate.
  */
 TupleTableSlot *
-AdaptiveExecutor(CustomScanState *node)
+AdaptiveExecutor(CustomScanState *node, bool startTupleStore)
 {
 	CitusScanState *scanState = (CitusScanState *) node;
 	TupleTableSlot *resultSlot = NULL;
@@ -609,8 +609,12 @@ AdaptiveExecutor(CustomScanState *node)
 
 	ExecuteSubPlans(distributedPlan);
 
-	scanState->tuplestorestate =
-		tuplestore_begin_heap(randomAccess, interTransactions, work_mem);
+	if (startTupleStore)
+	{
+		scanState->tuplestorestate =
+			tuplestore_begin_heap(randomAccess, interTransactions, work_mem);
+	}
+
 	tupleStore = scanState->tuplestorestate;
 
 	if (MultiShardConnectionType == SEQUENTIAL_CONNECTION)

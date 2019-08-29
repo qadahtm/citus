@@ -955,6 +955,12 @@ FinalizePlan(PlannedStmt *localPlan, DistributedPlan *distributedPlan)
 
 	switch (executorType)
 	{
+	case MULTI_EXECUTOR_LOCAL:
+
+	{
+			customScan->methods = &CitusLocalExecutorCustomScanMethods;
+			break;
+		}
 		case MULTI_EXECUTOR_ADAPTIVE:
 		{
 			customScan->methods = &AdaptiveExecutorCustomScanMethods;
@@ -1261,6 +1267,11 @@ multi_relation_restriction_hook(PlannerInfo *root, RelOptInfo *relOptInfo, Index
 		return;
 	}
 
+	distributedTable = IsDistributedTable(rte->relid);
+		localTable = !distributedTable;
+if (localTable)
+	return;
+
 	/*
 	 * Use a memory context that's guaranteed to live long enough, could be
 	 * called in a more shorted lived one (e.g. with GEQO).
@@ -1269,8 +1280,7 @@ multi_relation_restriction_hook(PlannerInfo *root, RelOptInfo *relOptInfo, Index
 	restrictionsMemoryContext = plannerRestrictionContext->memoryContext;
 	oldMemoryContext = MemoryContextSwitchTo(restrictionsMemoryContext);
 
-	distributedTable = IsDistributedTable(rte->relid);
-	localTable = !distributedTable;
+
 
 	relationRestriction = palloc0(sizeof(RelationRestriction));
 	relationRestriction->index = index;

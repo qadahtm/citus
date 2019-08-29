@@ -29,6 +29,7 @@
 
 
 /* functions for creating custom scan nodes */
+static Node * CitusLocalExecutorCreateScan(CustomScan *scan);
 static Node * AdaptiveExecutorCreateScan(CustomScan *scan);
 static Node * RealTimeCreateScan(CustomScan *scan);
 static Node * TaskTrackerCreateScan(CustomScan *scan);
@@ -43,6 +44,11 @@ static void CitusReScan(CustomScanState *node);
 
 
 /* create custom scan methods for all executors */
+CustomScanMethods CitusLocalExecutorCustomScanMethods = {
+	"Citus Local",
+	CitusLocalExecutorCreateScan
+};
+
 CustomScanMethods AdaptiveExecutorCustomScanMethods = {
 	"Citus Adaptive",
 	AdaptiveExecutorCreateScan
@@ -77,6 +83,15 @@ CustomScanMethods DelayedErrorCustomScanMethods = {
 /*
  * Define executor methods for the different executor types.
  */
+static CustomExecMethods CitusLocalExecutorCustomExecMethods = {
+	.CustomName = "CitusLocalExecutorCustomExecMethods",
+	.BeginCustomScan = CitusBeginScan,
+	.ExecCustomScan = LocalExecutorExecScan,
+	.EndCustomScan = CitusEndScan,
+	.ReScanCustomScan = CitusReScan,
+	.ExplainCustomScan = CitusExplainScan
+};
+
 static CustomExecMethods AdaptiveExecutorCustomExecMethods = {
 	.CustomName = "AdaptiveExecutorScan",
 	.BeginCustomScan = CitusBeginScan,
@@ -193,7 +208,7 @@ CitusExecScan(CustomScanState *node)
 
 	if (!scanState->finishedRemoteScan)
 	{
-		AdaptiveExecutor(node);
+		AdaptiveExecutor(node, true);
 
 		scanState->finishedRemoteScan = true;
 	}
@@ -203,6 +218,23 @@ CitusExecScan(CustomScanState *node)
 	return resultSlot;
 }
 
+
+/*
+ * CitusLocalExecutorCreateScan creates the scan state for the citus local executor.
+ */
+static Node *
+CitusLocalExecutorCreateScan(CustomScan *scan)
+{
+	CitusScanState *scanState = palloc0(sizeof(CitusScanState));
+
+	scanState->executorType = MULTI_EXECUTOR_LOCAL;
+	scanState->customScanState.ss.ps.type = T_CustomScanState;
+	scanState->distributedPlan = GetDistributedPlan(scan);
+
+	scanState->customScanState.methods = &CitusLocalExecutorCustomExecMethods;
+
+	return (Node *) scanState;
+}
 
 /*
  * AdaptiveExecutorCreateScan creates the scan state for the adaptive executor.

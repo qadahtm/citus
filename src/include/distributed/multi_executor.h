@@ -25,6 +25,45 @@ typedef enum
 	PARALLEL_CONNECTION = 0,
 	SEQUENTIAL_CONNECTION = 1
 } MultiShardConnectionTypes;
+
+
+/*
+ * ExecutionLevel describes the level exectuion for the distributed query execution.
+ * In Citus MX, where the data nodes also hold the metadata, it is possible to skip
+ * connection establishment and execute the query locally within the same local
+ * transaction.
+ *
+ * This enum keeps track of the levels of execution happening within the
+ * transaction blocks. Note that use this enum even if we're not in a
+ * transaction block, but that's only to be consistent.
+ */
+typedef enum ExecutionLevel
+{
+	/* nothing has been executed yet */
+	EXECUTION_LEVEL_NONE,
+
+	/*
+	 * Only executions on the shards that are local to the current
+	 * node has happened within the current transaction. So, no
+	 * connections has been used at all.
+	 */
+	EXECUTION_LEVEL_LOCAL_ONLY,
+
+	/*
+	 *
+	 */
+	EXECUTION_LEVEL_INCLUDING_LOCAL,
+
+	/*
+	 *
+	 */
+	EXECUTION_LEVEL_REMOTE_ONLY
+
+} ExecutionLevel;
+
+
+
+
 extern int MultiShardConnectionType;
 
 
@@ -37,7 +76,7 @@ extern int ExecutorSlowStartInterval;
 extern void CitusExecutorStart(QueryDesc *queryDesc, int eflags);
 extern void CitusExecutorRun(QueryDesc *queryDesc, ScanDirection direction, uint64 count,
 							 bool execute_once);
-extern TupleTableSlot * AdaptiveExecutor(CustomScanState *node);
+extern TupleTableSlot * AdaptiveExecutor(CustomScanState *node, bool startTupleStore);
 extern uint64 ExecuteTaskListExtended(RowModifyLevel modLevel, List *taskList,
 									  TupleDesc tupleDescriptor,
 									  Tuplestorestate *tupleStore,
@@ -46,6 +85,8 @@ extern void ExecuteUtilityTaskListWithoutResults(List *taskList);
 extern uint64 ExecuteTaskList(RowModifyLevel modLevel, List *taskList, int
 							  targetPoolSize);
 extern TupleTableSlot * CitusExecScan(CustomScanState *node);
+TupleTableSlot *
+LocalExecutorExecScan(CustomScanState *node);
 extern TupleTableSlot * ReturnTupleFromTuplestore(CitusScanState *scanState);
 extern void LoadTuplesIntoTupleStore(CitusScanState *citusScanState, Job *workerJob);
 extern void ReadFileIntoTupleStore(char *fileName, char *copyFormat, TupleDesc
