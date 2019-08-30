@@ -196,7 +196,12 @@ PlanReindexStmt(ReindexStmt *ReindexStatement, const char *ReindexCommand)
 		Oid relationId = InvalidOid;
 		bool isDistributedRelation = false;
 		char *namespaceName = NULL;
-		LOCKMODE lockmode = ShareLock;
+#if PG_VERSION_NUM >= 120000
+		LOCKMODE lockmode = ReindexStatement->concurrent ? ShareUpdateExclusiveLock :
+							AccessExclusiveLock;
+#else
+		LOCKMODE lockmode = AccessExclusiveLock;
+#endif
 		MemoryContext relationContext = NULL;
 
 		/*

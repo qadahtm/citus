@@ -732,11 +732,13 @@ deparse_shard_reindex_statement(ReindexStmt *origStmt, Oid distrelid, int64 shar
 		appendStringInfoString(buffer, "(VERBOSE) ");
 	}
 
+	const char *concurrentlyString = reindexStmt->concurrent ? "CONCURRENTLY " : "";
+
 	switch (reindexStmt->kind)
 	{
 		case REINDEX_OBJECT_INDEX:
 		{
-			appendStringInfo(buffer, "INDEX %s",
+			appendStringInfo(buffer, "INDEX %s%s", concurrentlyString,
 							 quote_qualified_identifier(reindexStmt->relation->schemaname,
 														relationName));
 			break;
@@ -744,7 +746,7 @@ deparse_shard_reindex_statement(ReindexStmt *origStmt, Oid distrelid, int64 shar
 
 		case REINDEX_OBJECT_TABLE:
 		{
-			appendStringInfo(buffer, "TABLE %s",
+			appendStringInfo(buffer, "TABLE %s%s", concurrentlyString,
 							 quote_qualified_identifier(reindexStmt->relation->schemaname,
 														relationName));
 			break;
@@ -752,21 +754,21 @@ deparse_shard_reindex_statement(ReindexStmt *origStmt, Oid distrelid, int64 shar
 
 		case REINDEX_OBJECT_SCHEMA:
 		{
-			appendStringInfo(buffer, "SCHEMA %s",
+			appendStringInfo(buffer, "SCHEMA %s%s", concurrentlyString,
 							 quote_identifier(reindexStmt->name));
 			break;
 		}
 
 		case REINDEX_OBJECT_SYSTEM:
 		{
-			appendStringInfo(buffer, "SYSTEM %s",
+			appendStringInfo(buffer, "SYSTEM %s%s", concurrentlyString,
 							 quote_identifier(reindexStmt->name));
 			break;
 		}
 
 		case REINDEX_OBJECT_DATABASE:
 		{
-			appendStringInfo(buffer, "DATABASE %s",
+			appendStringInfo(buffer, "DATABASE %s%s", concurrentlyString,
 							 quote_identifier(reindexStmt->name));
 			break;
 		}
