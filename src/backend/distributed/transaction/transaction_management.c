@@ -6,7 +6,7 @@
  *   subsystems, this files, and especially CoordinatedTransactionCallback,
  *   coordinates the work between them.
  *
- * Copyright (c) 2016, Citus Data, Inc.
+ * Copyright (c) 2012-2019, Citus Data, Inc.
  *
  *-------------------------------------------------------------------------
  */

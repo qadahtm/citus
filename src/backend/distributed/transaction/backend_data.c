@@ -5,7 +5,7 @@
  *  Infrastructure for managing per backend data that can efficiently
  *  accessed by all sessions.
  *
- * Copyright (c) 2017, Citus Data, Inc.
+ * Copyright (c) 2012-2019, Citus Data, Inc.
  *
  *-------------------------------------------------------------------------
  */

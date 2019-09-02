@@ -3,7 +3,7 @@
  * remote_commands.c
  *   Helpers to make it easier to execute command on remote nodes.
  *
- * Copyright (c) 2016, Citus Data, Inc.
+ * Copyright (c) 2012-2019, Citus Data, Inc.
  *
  *-------------------------------------------------------------------------
  */

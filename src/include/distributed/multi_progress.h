@@ -4,7 +4,7 @@
  *    Declarations for public functions and variables used in progress
  *    tracking functions in Citus.
  *
- * Copyright (c) 2017, Citus Data, Inc.
+ * Copyright (c) 2012-2019, Citus Data, Inc.
  *
  *-------------------------------------------------------------------------
  */

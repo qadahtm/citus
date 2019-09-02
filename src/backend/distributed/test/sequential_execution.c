@@ -5,7 +5,7 @@
  * This file contains functions to test setting citus.multi_shard_modify_mode
  * GUC.
  *
- * Copyright (c) 2018, Citus Data, Inc.
+ * Copyright (c) 2012-2019, Citus Data, Inc.
  *
  *-------------------------------------------------------------------------
  */

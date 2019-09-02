@@ -6,7 +6,7 @@
  *  node is a distributed transaction, and an edge represent a waiting-for
  *  relationship.
  *
- * Copyright (c) 2017, Citus Data, Inc.
+ * Copyright (c) 2012-2019, Citus Data, Inc.
  *
  *-------------------------------------------------------------------------
  */

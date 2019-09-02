@@ -5,7 +5,7 @@
  * This file contains UDFs for getting foreign constraint relationship between
  * distributed tables.
  *
- * Copyright (c) 2018, Citus Data, Inc.
+ * Copyright (c) 2012-2019, Citus Data, Inc.
  *
  *-------------------------------------------------------------------------
  */

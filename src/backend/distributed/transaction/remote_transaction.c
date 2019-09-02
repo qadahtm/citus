@@ -3,7 +3,7 @@
  * remote_transaction.c
  *   Management of transaction spanning more than one node.
  *
- * Copyright (c) 2016, Citus Data, Inc.
+ * Copyright (c) 2012-2019, Citus Data, Inc.
  *
  *-------------------------------------------------------------------------
  */

@@ -2,7 +2,7 @@
  * multi_partitioning_utils.c
  *	  Utility functions for declarative partitioning
  *
- * Copyright (c) 2017, Citus Data, Inc.
+ * Copyright (c) 2012-2019, Citus Data, Inc.
  */
 #include "postgres.h"
 

@@ -3,7 +3,7 @@
  * worker_shard_visibility.h
  *   Hide shard names on MX worker nodes.
  *
- * Copyright (c) 2018, Citus Data, Inc.
+ * Copyright (c) 2012-2019, Citus Data, Inc.
  *
  *-------------------------------------------------------------------------
  */

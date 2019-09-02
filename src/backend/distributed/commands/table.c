@@ -3,7 +3,7 @@
  * table.c
  *    Commands for creating and altering distributed tables.
  *
- * Copyright (c) 2018, Citus Data, Inc.
+ * Copyright (c) 2012-2019, Citus Data, Inc.
  *
  *-------------------------------------------------------------------------
  */

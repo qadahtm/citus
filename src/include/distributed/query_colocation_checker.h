@@ -3,7 +3,7 @@
  * query_colocation_checker.h
  *	  General Citus planner code.
  *
- * Copyright (c) 2017, Citus Data, Inc.
+ * Copyright (c) 2012-2019, Citus Data, Inc.
  *-------------------------------------------------------------------------
  */
 

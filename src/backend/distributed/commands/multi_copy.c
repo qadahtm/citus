@@ -43,7 +43,7 @@
  * is run, while constraints are enforced on the worker. In either case,
  * failure causes the whole COPY to roll back.
  *
- * Copyright (c) 2016, Citus Data, Inc.
+ * Copyright (c) 2012-2019, Citus Data, Inc.
  *
  * With contributions from Postgres Professional.
  *

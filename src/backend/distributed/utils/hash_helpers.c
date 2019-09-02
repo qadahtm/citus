@@ -3,7 +3,7 @@
  * hash_helpers.c
  *   Helpers for dynahash.c style hash tables.
  *
- * Copyright (c) 2016, Citus Data, Inc.
+ * Copyright (c) 2012-2019, Citus Data, Inc.
  *
  *-------------------------------------------------------------------------
  */

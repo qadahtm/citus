@@ -5,7 +5,7 @@
  * Declarations for public functions and types related to executing
  * INSERT..SELECT commands.
  *
- * Copyright (c) 2017, Citus Data, Inc.
+ * Copyright (c) 2012-2019, Citus Data, Inc.
  *
  *-------------------------------------------------------------------------
  */
