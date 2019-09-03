@@ -64,6 +64,7 @@
 #include "parser/parse_node.h"
 #include "parser/parse_relation.h"
 #include "parser/parser.h"
+#include "storage/lmgr.h"
 #include "tcop/pquery.h"
 #include "tcop/tcopprot.h"
 #include "utils/builtins.h"
@@ -307,6 +308,12 @@ create_reference_table(PG_FUNCTION_ARGS)
 	 * will be performed in CreateDistributedTable.
 	 */
 	EnsureRelationKindSupported(relationId);
+
+	/*
+	 * Take a lock on pg_dist_node to serialize pg_dist_node changes
+	 * with reference table distribution
+	 */
+	LockRelationOid(DistNodeRelationId(), AccessShareLock);
 
 	workerNodeList = ActivePrimaryNodeList();
 	workerCount = list_length(workerNodeList);
