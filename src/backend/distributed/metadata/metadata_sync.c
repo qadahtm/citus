@@ -43,6 +43,7 @@
 #include "distributed/version_compat.h"
 #include "foreign/foreign.h"
 #include "nodes/pg_list.h"
+#include "storage/lmgr.h"
 #include "utils/builtins.h"
 #include "utils/fmgroids.h"
 #include "utils/lsyscache.h"
@@ -52,6 +53,8 @@
 
 static char * LocalGroupIdUpdateCommand(int32 groupId);
 static void MarkNodeHasMetadata(char *nodeName, int32 nodePort, bool hasMetadata);
+static void UpdateDistNodeBoolAttr(char *nodeName, int32 nodePort, int attrNum,
+								   bool value);
 static List * SequenceDDLCommandsForTable(Oid relationId);
 static void EnsureSupportedSequenceColumnType(Oid sequenceOid);
 static Oid TypeOfColumn(Oid tableId, int16 columnId);
@@ -78,14 +81,9 @@ start_metadata_sync_to_node(PG_FUNCTION_ARGS)
 	text *nodeName = PG_GETARG_TEXT_P(0);
 	int32 nodePort = PG_GETARG_INT32(1);
 	char *nodeNameString = text_to_cstring(nodeName);
-	char *extensionOwner = CitusExtensionOwnerName();
 	char *escapedNodeName = quote_literal_cstr(nodeNameString);
 
 	WorkerNode *workerNode = NULL;
-	char *localGroupIdUpdateCommand = NULL;
-	List *recreateMetadataSnapshotCommandList = NIL;
-	List *dropMetadataCommandList = NIL;
-	List *createMetadataCommandList = NIL;
 
 	EnsureCoordinator();
 	EnsureSuperUser();
@@ -123,30 +121,7 @@ start_metadata_sync_to_node(PG_FUNCTION_ARGS)
 		PG_RETURN_VOID();
 	}
 
-	/* generate and add the local group id's update query */
-	localGroupIdUpdateCommand = LocalGroupIdUpdateCommand(workerNode->groupId);
-
-	/* generate the queries which drop the metadata */
-	dropMetadataCommandList = MetadataDropCommands();
-
-	/* generate the queries which create the metadata from scratch */
-	createMetadataCommandList = MetadataCreateCommands();
-
-	recreateMetadataSnapshotCommandList = lappend(recreateMetadataSnapshotCommandList,
-												  localGroupIdUpdateCommand);
-	recreateMetadataSnapshotCommandList = list_concat(recreateMetadataSnapshotCommandList,
-													  dropMetadataCommandList);
-	recreateMetadataSnapshotCommandList = list_concat(recreateMetadataSnapshotCommandList,
-													  createMetadataCommandList);
-
-	/*
-	 * Send the snapshot recreation commands in a single remote transaction and
-	 * error out in any kind of failure. Note that it is not required to send
-	 * createMetadataSnapshotCommandList in the same transaction that we send
-	 * nodeDeleteCommand and nodeInsertCommand commands below.
-	 */
-	SendCommandListToWorkerInSingleTransaction(nodeNameString, nodePort, extensionOwner,
-											   recreateMetadataSnapshotCommandList);
+	RecreateMetadataSnapshot(workerNode);
 
 	PG_RETURN_VOID();
 }
@@ -177,6 +152,7 @@ stop_metadata_sync_to_node(PG_FUNCTION_ARGS)
 	}
 
 	MarkNodeHasMetadata(nodeNameString, nodePort, false);
+	MarkNodeMetadataSynced(nodeNameString, nodePort, false);
 
 	PG_RETURN_VOID();
 }
@@ -233,6 +209,41 @@ ShouldSyncTableMetadata(Oid relationId)
 	{
 		return false;
 	}
+}
+
+
+void
+RecreateMetadataSnapshot(WorkerNode *workerNode)
+{
+	char *extensionOwner = CitusExtensionOwnerName();
+
+	/* generate and add the local group id's update query */
+	char *localGroupIdUpdateCommand = LocalGroupIdUpdateCommand(workerNode->groupId);
+
+	/* generate the queries which drop the metadata */
+	List *dropMetadataCommandList = MetadataDropCommands();
+
+	/* generate the queries which create the metadata from scratch */
+	List *createMetadataCommandList = MetadataCreateCommands();
+
+	List *recreateMetadataSnapshotCommandList = list_make1(localGroupIdUpdateCommand);
+	recreateMetadataSnapshotCommandList = list_concat(recreateMetadataSnapshotCommandList,
+													  dropMetadataCommandList);
+	recreateMetadataSnapshotCommandList = list_concat(recreateMetadataSnapshotCommandList,
+													  createMetadataCommandList);
+
+	/*
+	 * Send the snapshot recreation commands in a single remote transaction and
+	 * error out in any kind of failure. Note that it is not required to send
+	 * createMetadataSnapshotCommandList in the same transaction that we send
+	 * nodeDeleteCommand and nodeInsertCommand commands below.
+	 */
+	SendCommandListToWorkerInSingleTransaction(workerNode->workerName,
+											   workerNode->workerPort,
+											   extensionOwner,
+											   recreateMetadataSnapshotCommandList);
+
+	MarkNodeMetadataSynced(workerNode->workerName, workerNode->workerPort, true);
 }
 
 
@@ -862,10 +873,36 @@ LocalGroupIdUpdateCommand(int32 groupId)
 
 /*
  * MarkNodeHasMetadata function sets the hasmetadata column of the specified worker in
- * pg_dist_node to true.
+ * pg_dist_node to hasNodeMetadata.
  */
 static void
 MarkNodeHasMetadata(char *nodeName, int32 nodePort, bool hasMetadata)
+{
+	UpdateDistNodeBoolAttr(nodeName, nodePort,
+						   Anum_pg_dist_node_hasmetadata,
+						   hasMetadata);
+}
+
+
+/*
+ * MarkNodeMetadataSynced function sets the metadatasynced column of the
+ * specified worker in pg_dist_node to the given value.
+ */
+void
+MarkNodeMetadataSynced(char *nodeName, int32 nodePort, bool synced)
+{
+	UpdateDistNodeBoolAttr(nodeName, nodePort,
+						   Anum_pg_dist_node_metadatasynced,
+						   synced);
+}
+
+
+/*
+ * UpdateDistNodeBoolAttr updates a boolean attribute of the specified worker
+ * to the given value.
+ */
+static void
+UpdateDistNodeBoolAttr(char *nodeName, int32 nodePort, int attrNum, bool value)
 {
 	const bool indexOK = false;
 
@@ -898,9 +935,9 @@ MarkNodeHasMetadata(char *nodeName, int32 nodePort, bool hasMetadata)
 
 	memset(replace, 0, sizeof(replace));
 
-	values[Anum_pg_dist_node_hasmetadata - 1] = BoolGetDatum(hasMetadata);
-	isnull[Anum_pg_dist_node_hasmetadata - 1] = false;
-	replace[Anum_pg_dist_node_hasmetadata - 1] = true;
+	values[attrNum - 1] = BoolGetDatum(value);
+	isnull[attrNum - 1] = false;
+	replace[attrNum - 1] = true;
 
 	heapTuple = heap_modify_tuple(heapTuple, tupleDescriptor, values, isnull, replace);
 
@@ -1195,4 +1232,29 @@ DetachPartitionCommandList(void)
 										 ENABLE_DDL_PROPAGATION);
 
 	return detachPartitionCommandList;
+}
+
+
+/*
+ * SyncMetadataToNodes tries recreating the metadata snapshop in the
+ * metadata workers that are out of sync.
+ */
+void
+SyncMetadataToNodes(void)
+{
+	List *workerList = NIL;
+	ListCell *workerCell = NULL;
+
+	LockRelationOid(DistNodeRelationId(), ExclusiveLock);
+
+	workerList = ActivePrimaryNodeList();
+	foreach(workerCell, workerList)
+	{
+		WorkerNode *workerNode = lfirst(workerCell);
+
+		if (workerNode->hasMetadata && !workerNode->metadataSynced)
+		{
+			RecreateMetadataSnapshot(workerNode);
+		}
+	}
 }

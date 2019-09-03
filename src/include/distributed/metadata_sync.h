@@ -37,7 +37,9 @@ extern char * CreateSchemaDDLCommand(Oid schemaId);
 extern char * PlacementUpsertCommand(uint64 shardId, uint64 placementId, int shardState,
 									 uint64 shardLength, int32 groupId);
 extern void CreateTableMetadataOnWorkers(Oid relationId);
-
+extern void MarkNodeMetadataSynced(char *nodeName, int32 nodePort, bool synced);
+extern void RecreateMetadataSnapshot(WorkerNode *workerNode);
+extern void SyncMetadataToNodes(void);
 
 #define DELETE_ALL_NODES "TRUNCATE pg_dist_node CASCADE"
 #define REMOVE_ALL_CLUSTERED_TABLES_COMMAND \
