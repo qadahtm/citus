@@ -1,9 +1,6 @@
 Parsed test spec with 2 sessions
 
 starting permutation: s2-load-metadata-cache s1-begin s1-add-second-worker s2-copy-to-reference-table s1-commit s2-print-content
-create_reference_table
-
-               
 step s2-load-metadata-cache: 
 	COPY test_reference_table FROM PROGRAM 'echo 1 && echo 2 && echo 3 && echo 4 && echo 5';
 
@@ -24,9 +21,9 @@ step s1-commit:
 
 step s2-copy-to-reference-table: <... completed>
 step s2-print-content: 
-	SELECT 
-		nodeport, success, result 
-	FROM 
+	SELECT
+		nodeport, success, result
+	FROM
 		run_command_on_placements('test_reference_table', 'select count(*) from %s')
 	ORDER BY
 		nodeport;
@@ -35,15 +32,8 @@ nodeport       success        result
 
 57637          t              10             
 57638          t              10             
-master_remove_node
-
-               
-               
 
 starting permutation: s2-load-metadata-cache s2-begin s2-copy-to-reference-table s1-add-second-worker s2-commit s2-print-content
-create_reference_table
-
-               
 step s2-load-metadata-cache: 
 	COPY test_reference_table FROM PROGRAM 'echo 1 && echo 2 && echo 3 && echo 4 && echo 5';
 
@@ -64,9 +54,9 @@ nodename       nodeport       isactive
 
 localhost      57638          t              
 step s2-print-content: 
-	SELECT 
-		nodeport, success, result 
-	FROM 
+	SELECT
+		nodeport, success, result
+	FROM
 		run_command_on_placements('test_reference_table', 'select count(*) from %s')
 	ORDER BY
 		nodeport;
@@ -75,15 +65,8 @@ nodeport       success        result
 
 57637          t              10             
 57638          t              10             
-master_remove_node
-
-               
-               
 
 starting permutation: s2-load-metadata-cache s1-begin s1-add-second-worker s2-insert-to-reference-table s1-commit s2-print-content
-create_reference_table
-
-               
 step s2-load-metadata-cache: 
 	COPY test_reference_table FROM PROGRAM 'echo 1 && echo 2 && echo 3 && echo 4 && echo 5';
 
@@ -104,9 +87,9 @@ step s1-commit:
 
 step s2-insert-to-reference-table: <... completed>
 step s2-print-content: 
-	SELECT 
-		nodeport, success, result 
-	FROM 
+	SELECT
+		nodeport, success, result
+	FROM
 		run_command_on_placements('test_reference_table', 'select count(*) from %s')
 	ORDER BY
 		nodeport;
@@ -115,15 +98,8 @@ nodeport       success        result
 
 57637          t              6              
 57638          t              6              
-master_remove_node
-
-               
-               
 
 starting permutation: s2-load-metadata-cache s2-begin s2-insert-to-reference-table s1-add-second-worker s2-commit s2-print-content
-create_reference_table
-
-               
 step s2-load-metadata-cache: 
 	COPY test_reference_table FROM PROGRAM 'echo 1 && echo 2 && echo 3 && echo 4 && echo 5';
 
@@ -144,9 +120,9 @@ nodename       nodeport       isactive
 
 localhost      57638          t              
 step s2-print-content: 
-	SELECT 
-		nodeport, success, result 
-	FROM 
+	SELECT
+		nodeport, success, result
+	FROM
 		run_command_on_placements('test_reference_table', 'select count(*) from %s')
 	ORDER BY
 		nodeport;
@@ -155,15 +131,8 @@ nodeport       success        result
 
 57637          t              6              
 57638          t              6              
-master_remove_node
-
-               
-               
 
 starting permutation: s2-load-metadata-cache s1-begin s1-add-second-worker s2-ddl-on-reference-table s1-commit s2-print-index-count
-create_reference_table
-
-               
 step s2-load-metadata-cache: 
 	COPY test_reference_table FROM PROGRAM 'echo 1 && echo 2 && echo 3 && echo 4 && echo 5';
 
@@ -184,9 +153,9 @@ step s1-commit:
 
 step s2-ddl-on-reference-table: <... completed>
 step s2-print-index-count: 
-	SELECT 
-		nodeport, success, result 
-	FROM 
+	SELECT
+		nodeport, success, result
+	FROM
 		run_command_on_placements('test_reference_table', 'select count(*) from pg_indexes WHERE tablename = ''%s''')
 	ORDER BY
 		nodeport;
@@ -195,15 +164,8 @@ nodeport       success        result
 
 57637          t              1              
 57638          t              1              
-master_remove_node
-
-               
-               
 
 starting permutation: s2-load-metadata-cache s2-begin s2-ddl-on-reference-table s1-add-second-worker s2-commit s2-print-index-count
-create_reference_table
-
-               
 step s2-load-metadata-cache: 
 	COPY test_reference_table FROM PROGRAM 'echo 1 && echo 2 && echo 3 && echo 4 && echo 5';
 
@@ -224,9 +186,9 @@ nodename       nodeport       isactive
 
 localhost      57638          t              
 step s2-print-index-count: 
-	SELECT 
-		nodeport, success, result 
-	FROM 
+	SELECT
+		nodeport, success, result
+	FROM
 		run_command_on_placements('test_reference_table', 'select count(*) from pg_indexes WHERE tablename = ''%s''')
 	ORDER BY
 		nodeport;
@@ -235,15 +197,106 @@ nodeport       success        result
 
 57637          t              1              
 57638          t              1              
-master_remove_node
 
-               
-               
+starting permutation: s2-load-metadata-cache s2-begin s1-add-second-worker s2-create-reference-table-2 s2-select-join-reference-table-2 s2-commit s2-print-content-2 s2-drop-reference-table-2
+step s2-load-metadata-cache: 
+	COPY test_reference_table FROM PROGRAM 'echo 1 && echo 2 && echo 3 && echo 4 && echo 5';
 
-starting permutation: s1-begin s1-add-second-worker s2-copy-to-reference-table s1-commit s2-print-content
+step s2-begin: 
+	BEGIN;
+
+step s1-add-second-worker: 
+	SELECT nodename, nodeport, isactive FROM master_add_node('localhost', 57638);
+
+nodename       nodeport       isactive       
+
+localhost      57638          t              
+step s2-create-reference-table-2: 
+	CREATE TABLE test_reference_table_2 (test_id integer);
+	SELECT create_reference_table('test_reference_table_2');
+
 create_reference_table
 
                
+step s2-select-join-reference-table-2: 
+	CREATE TABLE test_table (x int, y int);
+	SELECT create_distributed_table('test_table','x');
+	SELECT * FROM test_table JOIN test_reference_table_2 ON test_id = x;
+	DROP TABLE test_table;
+
+create_distributed_table
+
+               
+ERROR:  cannot perform query with placements that were modified over multiple connections
+step s2-commit: 
+	COMMIT;
+
+step s2-print-content-2: 
+	SELECT
+		nodeport, success, result
+	FROM
+		run_command_on_placements('test_reference_table', 'select count(*) from %s')
+	ORDER BY
+		nodeport;
+
+nodeport       success        result         
+
+57637          t              5              
+57638          t              5              
+step s2-drop-reference-table-2: 
+	DROP TABLE test_reference_table_2;
+
+ERROR:  table "test_reference_table_2" does not exist
+
+starting permutation: s2-load-metadata-cache s2-begin s2-create-reference-table-2 s1-add-second-worker s2-select-join-reference-table-2 s2-commit s2-print-content-2 s2-drop-reference-table-2
+step s2-load-metadata-cache: 
+	COPY test_reference_table FROM PROGRAM 'echo 1 && echo 2 && echo 3 && echo 4 && echo 5';
+
+step s2-begin: 
+	BEGIN;
+
+step s2-create-reference-table-2: 
+	CREATE TABLE test_reference_table_2 (test_id integer);
+	SELECT create_reference_table('test_reference_table_2');
+
+create_reference_table
+
+               
+step s1-add-second-worker: 
+	SELECT nodename, nodeport, isactive FROM master_add_node('localhost', 57638);
+ <waiting ...>
+step s2-select-join-reference-table-2: 
+	CREATE TABLE test_table (x int, y int);
+	SELECT create_distributed_table('test_table','x');
+	SELECT * FROM test_table JOIN test_reference_table_2 ON test_id = x;
+	DROP TABLE test_table;
+
+step s1-add-second-worker: <... completed>
+nodename       nodeport       isactive       
+
+localhost      57638          t              
+error in steps s2-select-join-reference-table-2 s1-add-second-worker: ERROR:  replication_factor (2) exceeds number of worker nodes (1)
+step s2-commit: 
+	COMMIT;
+
+step s2-print-content-2: 
+	SELECT
+		nodeport, success, result
+	FROM
+		run_command_on_placements('test_reference_table', 'select count(*) from %s')
+	ORDER BY
+		nodeport;
+
+nodeport       success        result         
+
+57637          t              5              
+57638          t              5              
+step s2-drop-reference-table-2: 
+	DROP TABLE test_reference_table_2;
+
+ERROR:  table "test_reference_table_2" does not exist
+
+starting permutation: s1-begin s1-add-second-worker s2-copy-to-reference-table s1-commit s2-print-content
 step s1-begin: 
     BEGIN;
 
@@ -261,9 +314,9 @@ step s1-commit:
 
 step s2-copy-to-reference-table: <... completed>
 step s2-print-content: 
-	SELECT 
-		nodeport, success, result 
-	FROM 
+	SELECT
+		nodeport, success, result
+	FROM
 		run_command_on_placements('test_reference_table', 'select count(*) from %s')
 	ORDER BY
 		nodeport;
@@ -272,15 +325,8 @@ nodeport       success        result
 
 57637          t              5              
 57638          t              5              
-master_remove_node
-
-               
-               
 
 starting permutation: s2-begin s2-copy-to-reference-table s1-add-second-worker s2-commit s2-print-content
-create_reference_table
-
-               
 step s2-begin: 
 	BEGIN;
 
@@ -298,9 +344,9 @@ nodename       nodeport       isactive
 
 localhost      57638          t              
 step s2-print-content: 
-	SELECT 
-		nodeport, success, result 
-	FROM 
+	SELECT
+		nodeport, success, result
+	FROM
 		run_command_on_placements('test_reference_table', 'select count(*) from %s')
 	ORDER BY
 		nodeport;
@@ -309,15 +355,8 @@ nodeport       success        result
 
 57637          t              5              
 57638          t              5              
-master_remove_node
-
-               
-               
 
 starting permutation: s1-begin s1-add-second-worker s2-insert-to-reference-table s1-commit s2-print-content
-create_reference_table
-
-               
 step s1-begin: 
     BEGIN;
 
@@ -335,9 +374,9 @@ step s1-commit:
 
 step s2-insert-to-reference-table: <... completed>
 step s2-print-content: 
-	SELECT 
-		nodeport, success, result 
-	FROM 
+	SELECT
+		nodeport, success, result
+	FROM
 		run_command_on_placements('test_reference_table', 'select count(*) from %s')
 	ORDER BY
 		nodeport;
@@ -346,15 +385,8 @@ nodeport       success        result
 
 57637          t              1              
 57638          t              1              
-master_remove_node
-
-               
-               
 
 starting permutation: s2-begin s2-insert-to-reference-table s1-add-second-worker s2-commit s2-print-content
-create_reference_table
-
-               
 step s2-begin: 
 	BEGIN;
 
@@ -372,9 +404,9 @@ nodename       nodeport       isactive
 
 localhost      57638          t              
 step s2-print-content: 
-	SELECT 
-		nodeport, success, result 
-	FROM 
+	SELECT
+		nodeport, success, result
+	FROM
 		run_command_on_placements('test_reference_table', 'select count(*) from %s')
 	ORDER BY
 		nodeport;
@@ -383,15 +415,8 @@ nodeport       success        result
 
 57637          t              1              
 57638          t              1              
-master_remove_node
-
-               
-               
 
 starting permutation: s1-begin s1-add-second-worker s2-ddl-on-reference-table s1-commit s2-print-index-count
-create_reference_table
-
-               
 step s1-begin: 
     BEGIN;
 
@@ -409,9 +434,9 @@ step s1-commit:
 
 step s2-ddl-on-reference-table: <... completed>
 step s2-print-index-count: 
-	SELECT 
-		nodeport, success, result 
-	FROM 
+	SELECT
+		nodeport, success, result
+	FROM
 		run_command_on_placements('test_reference_table', 'select count(*) from pg_indexes WHERE tablename = ''%s''')
 	ORDER BY
 		nodeport;
@@ -420,15 +445,8 @@ nodeport       success        result
 
 57637          t              1              
 57638          t              1              
-master_remove_node
-
-               
-               
 
 starting permutation: s2-begin s2-ddl-on-reference-table s1-add-second-worker s2-commit s2-print-index-count
-create_reference_table
-
-               
 step s2-begin: 
 	BEGIN;
 
@@ -446,9 +464,9 @@ nodename       nodeport       isactive
 
 localhost      57638          t              
 step s2-print-index-count: 
-	SELECT 
-		nodeport, success, result 
-	FROM 
+	SELECT
+		nodeport, success, result
+	FROM
 		run_command_on_placements('test_reference_table', 'select count(*) from pg_indexes WHERE tablename = ''%s''')
 	ORDER BY
 		nodeport;
@@ -457,7 +475,95 @@ nodeport       success        result
 
 57637          t              1              
 57638          t              1              
-master_remove_node
+
+starting permutation: s2-begin s1-add-second-worker s2-create-reference-table-2 s2-select-join-reference-table-2 s2-commit s2-print-content-2 s2-drop-reference-table-2
+step s2-begin: 
+	BEGIN;
+
+step s1-add-second-worker: 
+	SELECT nodename, nodeport, isactive FROM master_add_node('localhost', 57638);
+
+nodename       nodeport       isactive       
+
+localhost      57638          t              
+step s2-create-reference-table-2: 
+	CREATE TABLE test_reference_table_2 (test_id integer);
+	SELECT create_reference_table('test_reference_table_2');
+
+create_reference_table
 
                
+step s2-select-join-reference-table-2: 
+	CREATE TABLE test_table (x int, y int);
+	SELECT create_distributed_table('test_table','x');
+	SELECT * FROM test_table JOIN test_reference_table_2 ON test_id = x;
+	DROP TABLE test_table;
+
+create_distributed_table
+
                
+ERROR:  cannot perform query with placements that were modified over multiple connections
+step s2-commit: 
+	COMMIT;
+
+step s2-print-content-2: 
+	SELECT
+		nodeport, success, result
+	FROM
+		run_command_on_placements('test_reference_table', 'select count(*) from %s')
+	ORDER BY
+		nodeport;
+
+nodeport       success        result         
+
+57637          t              0              
+57638          t              0              
+step s2-drop-reference-table-2: 
+	DROP TABLE test_reference_table_2;
+
+ERROR:  table "test_reference_table_2" does not exist
+
+starting permutation: s2-begin s2-create-reference-table-2 s1-add-second-worker s2-select-join-reference-table-2 s2-commit s2-print-content-2 s2-drop-reference-table-2
+step s2-begin: 
+	BEGIN;
+
+step s2-create-reference-table-2: 
+	CREATE TABLE test_reference_table_2 (test_id integer);
+	SELECT create_reference_table('test_reference_table_2');
+
+create_reference_table
+
+               
+step s1-add-second-worker: 
+	SELECT nodename, nodeport, isactive FROM master_add_node('localhost', 57638);
+ <waiting ...>
+step s2-select-join-reference-table-2: 
+	CREATE TABLE test_table (x int, y int);
+	SELECT create_distributed_table('test_table','x');
+	SELECT * FROM test_table JOIN test_reference_table_2 ON test_id = x;
+	DROP TABLE test_table;
+
+step s1-add-second-worker: <... completed>
+nodename       nodeport       isactive       
+
+localhost      57638          t              
+error in steps s2-select-join-reference-table-2 s1-add-second-worker: ERROR:  replication_factor (2) exceeds number of worker nodes (1)
+step s2-commit: 
+	COMMIT;
+
+step s2-print-content-2: 
+	SELECT
+		nodeport, success, result
+	FROM
+		run_command_on_placements('test_reference_table', 'select count(*) from %s')
+	ORDER BY
+		nodeport;
+
+nodeport       success        result         
+
+57637          t              0              
+57638          t              0              
+step s2-drop-reference-table-2: 
+	DROP TABLE test_reference_table_2;
+
+ERROR:  table "test_reference_table_2" does not exist

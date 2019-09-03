@@ -313,7 +313,7 @@ create_reference_table(PG_FUNCTION_ARGS)
 	 * Take a lock on pg_dist_node to serialize pg_dist_node changes
 	 * with reference table distribution
 	 */
-	LockRelationOid(DistNodeRelationId(), AccessShareLock);
+	LockRelationOid(DistNodeRelationId(), ShareLock);
 
 	workerNodeList = ActivePrimaryNodeList();
 	workerCount = list_length(workerNodeList);
