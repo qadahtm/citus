@@ -51,7 +51,7 @@
 
 
 /* Sync metadata to MX nodes every second. */
-#define METADATA_SYNC_TIMEOUT (1000)
+#define METADATA_SYNC_TIMEOUT (5000)
 
 /*
  * Shared memory data for all maintenance workers.
@@ -363,7 +363,7 @@ CitusMaintenanceDaemonMain(Datum main_arg)
 
 		if (TimestampDifferenceExceeds(lastMetadataSyncTime,
 									   GetCurrentTimestamp(),
-									   METADATA_SYNC_TIMEOUT) && false)
+									   METADATA_SYNC_TIMEOUT))
 		{
 			InvalidateMetadataSystemCache();
 			StartTransactionCommand();
