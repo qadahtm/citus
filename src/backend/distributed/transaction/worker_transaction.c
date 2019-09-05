@@ -257,13 +257,14 @@ SendCommandToWorkersParams(TargetWorkerSet targetWorkerSet, char *command,
  * node and executes the commands in the transaction. The function raises error if
  * any of the queries fails.
  */
-void
+int
 SendCommandListToWorkerInSingleTransaction(char *nodeName, int32 nodePort, char *nodeUser,
-										   List *commandList)
+										   List *commandList, bool raiseOnError)
 {
 	MultiConnection *workerConnection = NULL;
 	ListCell *commandCell = NULL;
 	int connectionFlags = FORCE_NEW_CONNECTION;
+	int result = 0;
 
 	if (XactModificationLevel > XACT_MODIFICATION_NONE)
 	{
@@ -283,9 +284,30 @@ SendCommandListToWorkerInSingleTransaction(char *nodeName, int32 nodePort, char 
 	{
 		char *commandString = lfirst(commandCell);
 
-		ExecuteCriticalRemoteCommand(workerConnection, commandString);
+		if (raiseOnError)
+		{
+			ExecuteCriticalRemoteCommand(workerConnection, commandString);
+		}
+		else
+		{
+			result = ExecuteOptionalRemoteCommand(workerConnection, commandString, NULL);
+			if (result != 0)
+			{
+				break;
+			}
+		}
 	}
 
-	RemoteTransactionCommit(workerConnection);
+	if (result == 0)
+	{
+		RemoteTransactionCommit(workerConnection);
+	}
+	else
+	{
+		RemoteTransactionAbort(workerConnection);
+	}
+
 	CloseConnection(workerConnection);
+
+	return result;
 }
