@@ -490,7 +490,7 @@ master_update_node(PG_FUNCTION_ARGS)
 	/*
 	 * force is used when an update needs to happen regardless of conflicting locks. This
 	 * feature is important to force the update during a failover due to failure, eg. by
-	 * a highavailability system such as pg_auto_failover. The strategy is a to start a
+	 * a highavailability system such as pg_auto_failover. The strategy is to start a
 	 * background worker that actively cancels backends holding conflicting locks with
 	 * this backend.
 	 *
