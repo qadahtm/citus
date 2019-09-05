@@ -173,6 +173,7 @@ SendCommandToWorkersParams(TargetWorkerSet targetWorkerSet, char *command,
 						   const char *const *parameterValues)
 {
 	List *connectionList = NIL;
+	List *failedConnectionList = NIL;
 	ListCell *connectionCell = NULL;
 	List *workerNodeList = ActivePrimaryNodeList();
 	ListCell *workerNodeCell = NULL;
@@ -229,8 +230,23 @@ SendCommandToWorkersParams(TargetWorkerSet targetWorkerSet, char *command,
 												parameterTypes, parameterValues);
 		if (querySent == 0)
 		{
-			ReportConnectionError(connection, ERROR);
+			if (targetWorkerSet == WORKERS_WITH_METADATA)
+			{
+				ReportConnectionError(connection, WARNING);
+				MarkNodeMetadataSynced(connection->hostname, connection->port, false);
+				lappend(failedConnectionList, connection);
+			}
+			else
+			{
+				ReportConnectionError(connection, ERROR);
+			}
 		}
+	}
+
+	/* skip failed connections by removing failedConnectionList from connectionList */
+	foreach(connectionCell, failedConnectionList)
+	{
+		list_delete_ptr(connectionList, lfirst(connectionCell));
 	}
 
 	/* get results */
@@ -241,7 +257,15 @@ SendCommandToWorkersParams(TargetWorkerSet targetWorkerSet, char *command,
 		PGresult *result = GetRemoteCommandResult(connection, true);
 		if (!IsResponseOK(result))
 		{
-			ReportResultError(connection, result, ERROR);
+			if (targetWorkerSet == WORKERS_WITH_METADATA)
+			{
+				ReportResultError(connection, result, WARNING);
+				MarkNodeMetadataSynced(connection->hostname, connection->port, false);
+			}
+			else
+			{
+				ReportResultError(connection, result, ERROR);
+			}
 		}
 
 		PQclear(result);
