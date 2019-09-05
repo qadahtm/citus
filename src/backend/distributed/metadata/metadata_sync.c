@@ -123,7 +123,7 @@ start_metadata_sync_to_node(PG_FUNCTION_ARGS)
 		PG_RETURN_VOID();
 	}
 
-	RecreateMetadataSnapshot(workerNode);
+	RecreateMetadataSnapshot(workerNode, true);
 
 	PG_RETURN_VOID();
 }
@@ -216,9 +216,10 @@ ShouldSyncTableMetadata(Oid relationId)
 }
 
 
-void
-RecreateMetadataSnapshot(WorkerNode *workerNode)
+int
+RecreateMetadataSnapshot(WorkerNode *workerNode, bool raiseOnError)
 {
+	int result = 0;
 	char *extensionOwner = CitusExtensionOwnerName();
 
 	/* generate and add the local group id's update query */
@@ -242,12 +243,18 @@ RecreateMetadataSnapshot(WorkerNode *workerNode)
 	 * createMetadataSnapshotCommandList in the same transaction that we send
 	 * nodeDeleteCommand and nodeInsertCommand commands below.
 	 */
-	SendCommandListToWorkerInSingleTransaction(workerNode->workerName,
-											   workerNode->workerPort,
-											   extensionOwner,
-											   recreateMetadataSnapshotCommandList);
+	result = SendCommandListToWorkerInSingleTransaction(workerNode->workerName,
+														workerNode->workerPort,
+														extensionOwner,
+														recreateMetadataSnapshotCommandList,
+														raiseOnError);
 
-	MarkNodeMetadataSynced(workerNode->workerName, workerNode->workerPort, true);
+	if (result == 0)
+	{
+		MarkNodeMetadataSynced(workerNode->workerName, workerNode->workerPort, true);
+	}
+
+	return result;
 }
 
 
@@ -1266,7 +1273,7 @@ SyncMetadataToNodes(void)
 
 		if (workerNode->hasMetadata && !workerNode->metadataSynced)
 		{
-			RecreateMetadataSnapshot(workerNode);
+			RecreateMetadataSnapshot(workerNode, true);
 		}
 	}
 

@@ -323,7 +323,7 @@ RepairShardPlacement(int64 shardId, char *sourceNodeName, int32 sourceNodePort,
 	}
 
 	SendCommandListToWorkerInSingleTransaction(targetNodeName, targetNodePort, tableOwner,
-											   ddlCommandList);
+											   ddlCommandList, true);
 
 	/* after successful repair, we update shard state as healthy*/
 	placementList = ShardPlacementList(shardId);

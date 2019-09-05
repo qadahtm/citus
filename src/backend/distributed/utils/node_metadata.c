@@ -580,7 +580,7 @@ master_update_node(PG_FUNCTION_ARGS)
 
 	if (workerNode->hasMetadata)
 	{
-		RecreateMetadataSnapshot(workerNode);
+		RecreateMetadataSnapshot(workerNode, true);
 	}
 
 	SyncDistNodeEntry(workerNode);
