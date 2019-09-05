@@ -1243,9 +1243,10 @@ DetachPartitionCommandList(void)
 
 /*
  * SyncMetadataToNodes tries recreating the metadata snapshop in the
- * metadata workers that are out of sync.
+ * metadata workers that are out of sync. Returns false if synchronization
+ * fails.
  */
-void
+bool
 SyncMetadataToNodes(void)
 {
 	List *workerList = NIL;
@@ -1253,7 +1254,7 @@ SyncMetadataToNodes(void)
 
 	if (!IsCoordinator())
 	{
-		return;
+		return true;
 	}
 
 	LockRelationOid(DistNodeRelationId(), ExclusiveLock);
@@ -1268,4 +1269,6 @@ SyncMetadataToNodes(void)
 			RecreateMetadataSnapshot(workerNode);
 		}
 	}
+
+	return true;
 }

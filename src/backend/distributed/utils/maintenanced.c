@@ -51,7 +51,8 @@
 
 
 /* Sync metadata to MX nodes every second. */
-#define METADATA_SYNC_TIMEOUT (5000)
+#define METADATA_SYNC_TIMEOUT (60000)
+#define METADATA_SYNC_RETRY_TIMEOUT (5000)
 
 /*
  * Shared memory data for all maintenance workers.
@@ -229,7 +230,7 @@ CitusMaintenanceDaemonMain(Datum main_arg)
 	bool retryStatsCollection USED_WITH_LIBCURL_ONLY = false;
 	ErrorContextCallback errorCallback;
 	TimestampTz lastRecoveryTime = 0;
-	TimestampTz lastMetadataSyncTime = 0;
+	TimestampTz nextMetadataSyncTime = 0;
 
 	/*
 	 * Look up this worker's configuration.
@@ -361,10 +362,11 @@ CitusMaintenanceDaemonMain(Datum main_arg)
 		}
 #endif
 
-		if (TimestampDifferenceExceeds(lastMetadataSyncTime,
-									   GetCurrentTimestamp(),
-									   METADATA_SYNC_TIMEOUT))
+		if (GetCurrentTimestamp() >= nextMetadataSyncTime)
 		{
+			bool metadataSyncFailed = false;
+			int64 nextTimeout = 0;
+
 			InvalidateMetadataSystemCache();
 			StartTransactionCommand();
 
@@ -375,13 +377,16 @@ CitusMaintenanceDaemonMain(Datum main_arg)
 			}
 			else if (CheckCitusVersion(DEBUG1) && CitusHasBeenLoaded())
 			{
-				lastMetadataSyncTime = GetCurrentTimestamp();
-				SyncMetadataToNodes();
+				metadataSyncFailed = !SyncMetadataToNodes();
 			}
 
 			CommitTransactionCommand();
 
-			timeout = Min(timeout, METADATA_SYNC_TIMEOUT);
+			nextTimeout = metadataSyncFailed ? METADATA_SYNC_RETRY_TIMEOUT :
+						  METADATA_SYNC_TIMEOUT;
+			nextMetadataSyncTime =
+				TimestampTzPlusMilliseconds(GetCurrentTimestamp(), nextTimeout);
+			timeout = Min(timeout, nextTimeout);
 		}
 
 		/*
