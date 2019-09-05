@@ -123,7 +123,7 @@ start_metadata_sync_to_node(PG_FUNCTION_ARGS)
 		PG_RETURN_VOID();
 	}
 
-	RecreateMetadataSnapshot(workerNode, true);
+	RecreateMetadataSnapshot(workerNode, false);
 
 	PG_RETURN_VOID();
 }
