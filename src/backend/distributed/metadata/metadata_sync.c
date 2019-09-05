@@ -92,6 +92,8 @@ start_metadata_sync_to_node(PG_FUNCTION_ARGS)
 
 	PreventInTransactionBlock(true, "start_metadata_sync_to_node");
 
+	LockRelationOid(DistNodeRelationId(), ExclusiveLock);
+
 	workerNode = FindWorkerNode(nodeNameString, nodePort);
 	if (workerNode == NULL)
 	{
@@ -143,6 +145,8 @@ stop_metadata_sync_to_node(PG_FUNCTION_ARGS)
 	EnsureCoordinator();
 	EnsureSuperUser();
 	CheckCitusVersion(ERROR);
+
+	LockRelationOid(DistNodeRelationId(), ExclusiveLock);
 
 	workerNode = FindWorkerNode(nodeNameString, nodePort);
 	if (workerNode == NULL)
@@ -882,7 +886,7 @@ LocalGroupIdUpdateCommand(int32 groupId)
 
 /*
  * MarkNodeHasMetadata function sets the hasmetadata column of the specified worker in
- * pg_dist_node to hasNodeMetadata.
+ * pg_dist_node to hasMetadata.
  */
 static void
 MarkNodeHasMetadata(char *nodeName, int32 nodePort, bool hasMetadata)
@@ -1253,6 +1257,11 @@ SyncMetadataToNodes(void)
 {
 	List *workerList = NIL;
 	ListCell *workerCell = NULL;
+
+	if (!IsCoordinator())
+	{
+		return;
+	}
 
 	LockRelationOid(DistNodeRelationId(), ExclusiveLock);
 
