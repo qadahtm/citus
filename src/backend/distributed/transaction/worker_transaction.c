@@ -180,7 +180,10 @@ SendCommandToWorkersParams(TargetWorkerSet targetWorkerSet, char *command,
 	char *nodeUser = CitusExtensionOwnerName();
 
 	BeginOrContinueCoordinatedTransaction();
-	CoordinatedTransactionUse2PC();
+	if (targetWorkerSet != WORKERS_WITH_METADATA)
+	{
+		CoordinatedTransactionUse2PC();
+	}
 
 	/* open connections in parallel */
 	foreach(workerNodeCell, workerNodeList)
@@ -206,7 +209,10 @@ SendCommandToWorkersParams(TargetWorkerSet targetWorkerSet, char *command,
 		connection = StartNodeUserDatabaseConnection(connectionFlags, nodeName, nodePort,
 													 nodeUser, NULL);
 
-		MarkRemoteTransactionCritical(connection);
+		if (targetWorkerSet != WORKERS_WITH_METADATA)
+		{
+			MarkRemoteTransactionCritical(connection);
+		}
 
 		connectionList = lappend(connectionList, connection);
 	}
