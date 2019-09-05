@@ -49,14 +49,8 @@
 #include "utils/memutils.h"
 #include "utils/lsyscache.h"
 
-
-/* Sync metadata to MX nodes every second. */
-<<<<<<< HEAD
 #define METADATA_SYNC_TIMEOUT (60000)
 #define METADATA_SYNC_RETRY_TIMEOUT (5000)
-=======
-#define METADATA_SYNC_TIMEOUT (5000)
->>>>>>> Maybe fix deadlock issues
 
 /*
  * Shared memory data for all maintenance workers.
