@@ -43,12 +43,12 @@ SELECT citus.mitmproxy('conn.onQuery(query="^INSERT INTO pg_dist_node").kill()')
 SELECT start_metadata_sync_to_node('localhost', :worker_2_proxy_port);
 
 -- Verify that coordinator knows worker does not have valid metadata
-SELECT hasmetadata FROM pg_dist_node WHERE nodeport=:worker_2_proxy_port;
+SELECT hasmetadata, metadatasynced FROM pg_dist_node WHERE nodeport=:worker_2_proxy_port;
 
 -- Verify we can sync metadata after unsuccessful attempts
 SELECT citus.mitmproxy('conn.allow()');
 SELECT start_metadata_sync_to_node('localhost', :worker_2_proxy_port);
-SELECT hasmetadata FROM pg_dist_node WHERE nodeport=:worker_2_proxy_port;
+SELECT hasmetadata, metadatasynced FROM pg_dist_node WHERE nodeport=:worker_2_proxy_port;
 
 -- Check failures on DDL command propagation
 CREATE TABLE t2 (id int PRIMARY KEY);
@@ -58,6 +58,8 @@ SELECT create_distributed_table('t2', 'id');
 
 SELECT citus.mitmproxy('conn.onParse(query="^INSERT INTO pg_dist_shard").cancel(' || :pid || ')');
 SELECT create_distributed_table('t2', 'id');
+
+SELECT hasmetadata, metadatasynced FROM pg_dist_node WHERE nodeport=:worker_2_proxy_port;
 
 -- Verify that the table was not distributed
 SELECT count(*) > 0 AS is_table_distributed

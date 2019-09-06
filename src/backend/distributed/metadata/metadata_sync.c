@@ -68,12 +68,8 @@ PG_FUNCTION_INFO_V1(stop_metadata_sync_to_node);
 
 
 /*
- * start_metadata_sync_to_node function creates the metadata in a worker for preparing the
- * worker for accepting queries. The function first sets the localGroupId of the worker
- * so that the worker knows which tuple in pg_dist_node table represents itself. After
- * that, SQL statements for re-creating metadata of MX-eligible distributed tables are
- * sent to the worker. Finally, the hasmetadata column of the target node in pg_dist_node
- * is marked as true.
+ * start_metadata_sync_to_node function sets hasmetadata column of the given
+ * node to true, and then synchronizes the metadata on the node.
  */
 Datum
 start_metadata_sync_to_node(PG_FUNCTION_ARGS)
@@ -84,6 +80,9 @@ start_metadata_sync_to_node(PG_FUNCTION_ARGS)
 	char *escapedNodeName = quote_literal_cstr(nodeNameString);
 
 	WorkerNode *workerNode = NULL;
+
+	/* fail if metadata synchronization doesn't succeed */
+	bool raiseInterrupts = true;
 
 	EnsureCoordinator();
 	EnsureSuperUser();
@@ -123,7 +122,7 @@ start_metadata_sync_to_node(PG_FUNCTION_ARGS)
 		PG_RETURN_VOID();
 	}
 
-	RecreateMetadataSnapshot(workerNode, false);
+	RecreateMetadataSnapshot(workerNode, raiseInterrupts);
 
 	PG_RETURN_VOID();
 }
@@ -216,6 +215,15 @@ ShouldSyncTableMetadata(Oid relationId)
 }
 
 
+/*
+ * RecreateMetadataSnapshot does the following:
+ *  1. Sets the localGroupId on the worker so the worker knows which tuple in
+ *     pg_dist_node represents itself.
+ *  2. Recreates the distributed metadata on the given worker.
+ *  3. If synchronization succeeds, it sets the pg_dist_node.metadatasynced for
+ *     this node to true.
+ * If raiseOnError is true, it errors out if synchronization fails.
+ */
 int
 RecreateMetadataSnapshot(WorkerNode *workerNode, bool raiseOnError)
 {

@@ -226,6 +226,7 @@ RepairShardPlacement(int64 shardId, char *sourceNodeName, int32 sourceNodePort,
 	bool missingOk = false;
 	bool includeData = false;
 	bool partitionedTable = false;
+	bool raiseInterrupts = true;
 
 	List *ddlCommandList = NIL;
 	List *foreignConstraintCommandList = NIL;
@@ -323,7 +324,7 @@ RepairShardPlacement(int64 shardId, char *sourceNodeName, int32 sourceNodePort,
 	}
 
 	SendCommandListToWorkerInSingleTransaction(targetNodeName, targetNodePort, tableOwner,
-											   ddlCommandList, true);
+											   ddlCommandList, raiseInterrupts);
 
 	/* after successful repair, we update shard state as healthy*/
 	placementList = ShardPlacementList(shardId);

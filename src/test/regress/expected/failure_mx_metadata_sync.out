@@ -110,10 +110,10 @@ ERROR:  server closed the connection unexpectedly
 	before or while processing the request.
 CONTEXT:  while executing command on localhost:9060
 -- Verify that coordinator knows worker does not have valid metadata
-SELECT hasmetadata FROM pg_dist_node WHERE nodeport=:worker_2_proxy_port;
- hasmetadata 
--------------
- f
+SELECT hasmetadata, metadatasynced FROM pg_dist_node WHERE nodeport=:worker_2_proxy_port;
+ hasmetadata | metadatasynced 
+-------------+----------------
+ f           | f
 (1 row)
 
 -- Verify we can sync metadata after unsuccessful attempts
@@ -129,10 +129,10 @@ SELECT start_metadata_sync_to_node('localhost', :worker_2_proxy_port);
  
 (1 row)
 
-SELECT hasmetadata FROM pg_dist_node WHERE nodeport=:worker_2_proxy_port;
- hasmetadata 
--------------
- t
+SELECT hasmetadata, metadatasynced FROM pg_dist_node WHERE nodeport=:worker_2_proxy_port;
+ hasmetadata | metadatasynced 
+-------------+----------------
+ t           | t
 (1 row)
 
 -- Check failures on DDL command propagation
@@ -144,10 +144,13 @@ SELECT citus.mitmproxy('conn.onParse(query="^INSERT INTO pg_dist_placement").kil
 (1 row)
 
 SELECT create_distributed_table('t2', 'id');
-ERROR:  server closed the connection unexpectedly
+WARNING:  server closed the connection unexpectedly
 	This probably means the server terminated abnormally
 	before or while processing the request.
 CONTEXT:  while executing command on localhost:9060
+WARNING:  connection not open
+CONTEXT:  while executing command on localhost:9060
+ERROR:  could not make changes to shard 16000002 on any node
 SELECT citus.mitmproxy('conn.onParse(query="^INSERT INTO pg_dist_shard").cancel(' || :pid || ')');
  mitmproxy 
 -----------
@@ -156,6 +159,12 @@ SELECT citus.mitmproxy('conn.onParse(query="^INSERT INTO pg_dist_shard").cancel(
 
 SELECT create_distributed_table('t2', 'id');
 ERROR:  canceling statement due to user request
+SELECT hasmetadata, metadatasynced FROM pg_dist_node WHERE nodeport=:worker_2_proxy_port;
+ hasmetadata | metadatasynced 
+-------------+----------------
+ t           | t
+(1 row)
+
 -- Verify that the table was not distributed
 SELECT count(*) > 0 AS is_table_distributed
 FROM pg_dist_partition
