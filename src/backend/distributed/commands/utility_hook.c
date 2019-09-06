@@ -68,6 +68,7 @@ static char * SetSearchPathToCurrentSearchPathCommand(void);
 static char * CurrentSearchPath(void);
 static void PostProcessUtility(Node *parsetree);
 static List * PlanRenameAttributeStmt(RenameStmt *stmt, const char *queryString);
+static List * PlanAlterOwnerStmt(AlterOwnerStmt *stmt, const char *queryString);
 
 static inline void trackStatementDepth(Node *parsetree, const bool increment);
 
@@ -403,6 +404,12 @@ multi_ProcessUtility(PlannedStmt *pstmt,
 			ddlJobs = PlanGrantStmt((GrantStmt *) parsetree);
 		}
 
+		if (IsA(parsetree, AlterOwnerStmt))
+		{
+			ddlJobs = PlanAlterOwnerStmt(castNode(AlterOwnerStmt, parsetree),
+										 queryString);
+		}
+
 		if (IsA(parsetree, CreatePolicyStmt))
 		{
 			ddlJobs = PlanCreatePolicyStmt((CreatePolicyStmt *) parsetree);
@@ -641,6 +648,25 @@ PlanRenameAttributeStmt(RenameStmt *stmt, const char *queryString)
 		default:
 		{
 			/* unsupported relation for attribute rename, do nothing */
+			return NIL;
+		}
+	}
+}
+
+
+static List *
+PlanAlterOwnerStmt(AlterOwnerStmt *stmt, const char *queryString)
+{
+	switch (stmt->objectType)
+	{
+		case OBJECT_TYPE:
+		{
+			return PlanAlterTypeOwnerStmt(stmt, queryString);
+		}
+
+		default:
+		{
+			/* do nothing for unsupported alter owner statements */
 			return NIL;
 		}
 	}
