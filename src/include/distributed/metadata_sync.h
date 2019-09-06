@@ -38,7 +38,7 @@ extern char * PlacementUpsertCommand(uint64 shardId, uint64 placementId, int sha
 									 uint64 shardLength, int32 groupId);
 extern void CreateTableMetadataOnWorkers(Oid relationId);
 extern void MarkNodeMetadataSynced(char *nodeName, int32 nodePort, bool synced);
-extern int RecreateMetadataSnapshot(WorkerNode *workerNode, bool raiseOnError);
+extern bool RecreateMetadataSnapshot(WorkerNode *workerNode, bool raiseOnError);
 extern bool SyncMetadataToNodes(void);
 
 #define DELETE_ALL_NODES "TRUNCATE pg_dist_node CASCADE"

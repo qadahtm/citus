@@ -224,10 +224,10 @@ ShouldSyncTableMetadata(Oid relationId)
  *     this node to true.
  * If raiseOnError is true, it errors out if synchronization fails.
  */
-int
+bool
 RecreateMetadataSnapshot(WorkerNode *workerNode, bool raiseOnError)
 {
-	int result = 0;
+	int execResult = 0;
 	char *extensionOwner = CitusExtensionOwnerName();
 
 	/* generate and add the local group id's update query */
@@ -251,18 +251,22 @@ RecreateMetadataSnapshot(WorkerNode *workerNode, bool raiseOnError)
 	 * createMetadataSnapshotCommandList in the same transaction that we send
 	 * nodeDeleteCommand and nodeInsertCommand commands below.
 	 */
-	result = SendCommandListToWorkerInSingleTransaction(workerNode->workerName,
-														workerNode->workerPort,
-														extensionOwner,
-														recreateMetadataSnapshotCommandList,
-														raiseOnError);
+	execResult =
+		SendCommandListToWorkerInSingleTransaction(workerNode->workerName,
+												   workerNode->workerPort,
+												   extensionOwner,
+												   recreateMetadataSnapshotCommandList,
+												   raiseOnError);
 
-	if (result == 0)
+	if (execResult == 0)
 	{
 		MarkNodeMetadataSynced(workerNode->workerName, workerNode->workerPort, true);
+		return true;
 	}
-
-	return result;
+	else
+	{
+		return false;
+	}
 }
 
 
@@ -1259,13 +1263,14 @@ DetachPartitionCommandList(void)
 /*
  * SyncMetadataToNodes tries recreating the metadata snapshop in the
  * metadata workers that are out of sync. Returns false if synchronization
- * fails.
+ * to at least one of the workers fails.
  */
 bool
 SyncMetadataToNodes(void)
 {
 	List *workerList = NIL;
 	ListCell *workerCell = NULL;
+	bool result = true;
 
 	if (!IsCoordinator())
 	{
@@ -1281,9 +1286,13 @@ SyncMetadataToNodes(void)
 
 		if (workerNode->hasMetadata && !workerNode->metadataSynced)
 		{
-			RecreateMetadataSnapshot(workerNode, true);
+			bool raiseInterrupts = false;
+			if (!RecreateMetadataSnapshot(workerNode, raiseInterrupts))
+			{
+				result = false;
+			}
 		}
 	}
 
-	return true;
+	return result;
 }
