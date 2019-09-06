@@ -51,6 +51,7 @@
 #include "distributed/version_compat.h"
 #include "distributed/worker_transaction.h"
 #include "lib/stringinfo.h"
+#include "nodes/pg_list.h"
 #include "tcop/utility.h"
 #include "utils/builtins.h"
 #include "utils/lsyscache.h"
@@ -72,6 +73,7 @@ static List * PlanRenameAttributeStmt(RenameStmt *stmt, const char *queryString)
 static List * PlanAlterOwnerStmt(AlterOwnerStmt *stmt, const char *queryString);
 
 static inline void trackStatementDepth(Node *parsetree, const bool increment);
+static void ExecuteNodeBaseDDLCommands(List *taskList);
 
 
 /*
@@ -708,7 +710,19 @@ ExecuteDistributedDDLJob(DDLJob *ddlJob)
 		EnsurePartitionTableNotReplicated(ddlJob->targetRelationId);
 	}
 
-	if (!ddlJob->concurrentIndexCmd)
+	if (TaskExecutorType != MULTI_EXECUTOR_ADAPTIVE &&
+		ddlJob->targetRelationId == InvalidOid)
+	{
+		/*
+		 * Some ddl jobs can only be run by the adaptive executor and not our legacy ones.
+		 *
+		 * These are tasks that are not pinned to any relation nor shards. We can execute
+		 * these very naively with a simple for loop that sends them to the target worker.
+		 */
+
+		ExecuteNodeBaseDDLCommands(ddlJob->taskList);
+	}
+	else if (!ddlJob->concurrentIndexCmd)
 	{
 		if (shouldSyncMetadata)
 		{
@@ -772,6 +786,34 @@ ExecuteDistributedDDLJob(DDLJob *ddlJob)
 							 "invalid index, then retry the original command.")));
 		}
 		PG_END_TRY();
+	}
+}
+
+
+/*
+ * ExecuteNodeBaseDDLCommands executes ddl commands naively only when we are not using the
+ * adaptive executor. It gets connections to the target placements and executes the
+ * commands.
+ */
+static void
+ExecuteNodeBaseDDLCommands(List *taskList)
+{
+	ListCell *taskCell = NULL;
+
+	foreach(taskCell, taskList)
+	{
+		Task *task = (Task *) lfirst(taskCell);
+		ListCell *taskPlacementCell = NULL;
+
+		/* these tasks should not be pinned to any shard */
+		Assert(task->anchorShardId == INVALID_SHARD_ID);
+
+		foreach(taskPlacementCell, task->taskPlacementList)
+		{
+			ShardPlacement *placement = (ShardPlacement *) lfirst(taskPlacementCell);
+			SendCommandToWorker(placement->nodeName, placement->nodePort,
+								task->queryString);
+		}
 	}
 }
 
