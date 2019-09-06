@@ -63,7 +63,7 @@ SendCommandToWorker(char *nodeName, int32 nodePort, char *command)
 void
 SendCommandToFirstWorker(char *command)
 {
-	List *workerNodeList = ActivePrimaryNodeList();
+	List *workerNodeList = ActivePrimaryNodeList(NoLock);
 	WorkerNode *firstWorkerNode = NULL;
 
 	workerNodeList = SortList(workerNodeList, CompareWorkerNodes);
@@ -103,7 +103,7 @@ SendCommandToWorkers(TargetWorkerSet targetWorkerSet, char *command)
 void
 SendBareCommandListToWorkers(TargetWorkerSet targetWorkerSet, List *commandList)
 {
-	List *workerNodeList = ActivePrimaryNodeList();
+	List *workerNodeList = ActivePrimaryNodeList(ShareLock);
 	ListCell *workerNodeCell = NULL;
 	char *nodeUser = CitusExtensionOwnerName();
 	ListCell *commandCell = NULL;
@@ -160,7 +160,7 @@ SendCommandToWorkersParams(TargetWorkerSet targetWorkerSet, char *command,
 {
 	List *connectionList = NIL;
 	ListCell *connectionCell = NULL;
-	List *workerNodeList = ActivePrimaryNodeList();
+	List *workerNodeList = ActivePrimaryNodeList(ShareLock);
 	ListCell *workerNodeCell = NULL;
 	char *nodeUser = CitusExtensionOwnerName();
 

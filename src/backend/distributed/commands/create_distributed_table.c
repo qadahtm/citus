@@ -309,13 +309,8 @@ create_reference_table(PG_FUNCTION_ARGS)
 	 */
 	EnsureRelationKindSupported(relationId);
 
-	/*
-	 * Take a lock on pg_dist_node to serialize pg_dist_node changes
-	 * with reference table distribution
-	 */
-	LockRelationOid(DistNodeRelationId(), ShareLock);
-
-	workerNodeList = ActivePrimaryNodeList();
+	/* ShareLock prevents failing to distribute reference table to new node */
+	workerNodeList = ActivePrimaryNodeList(ShareLock);
 	workerCount = list_length(workerNodeList);
 
 	/* if there are no workers, error out */

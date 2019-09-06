@@ -216,7 +216,7 @@ get_global_active_transactions(PG_FUNCTION_ARGS)
 {
 	TupleDesc tupleDescriptor = NULL;
 	Tuplestorestate *tupleStore = NULL;
-	List *workerNodeList = ActivePrimaryNodeList();
+	List *workerNodeList = ActivePrimaryNodeList(NoLock);
 	ListCell *workerNodeCell = NULL;
 	List *connectionList = NIL;
 	ListCell *connectionCell = NULL;

@@ -1096,7 +1096,7 @@ SchemaOwnerName(Oid objectId)
 static bool
 HasMetadataWorkers(void)
 {
-	List *workerNodeList = ActivePrimaryNodeList();
+	List *workerNodeList = ActivePrimaryNodeList(ShareLock);
 	ListCell *workerNodeCell = NULL;
 
 	foreach(workerNodeCell, workerNodeList)
